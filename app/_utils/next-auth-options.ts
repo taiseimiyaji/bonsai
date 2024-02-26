@@ -1,7 +1,7 @@
-import TwitterProvider from "next-auth/providers/twitter";
 import GoogleProvider from "next-auth/providers/google";
 
 import type { NextAuthOptions } from "next-auth";
+import { PrismaClient } from "@prisma/client";
 
 export const nextAuthOptions: NextAuthOptions = {
     debug: true,
@@ -14,8 +14,6 @@ export const nextAuthOptions: NextAuthOptions = {
     ],
     callbacks: {
         jwt: async ({ token, user, account, profile }) => {
-            console.log("in jwt", { user, token, account, profile });
-
             if (user) {
                 token.user = user;
                 const u = user as any;
@@ -27,15 +25,40 @@ export const nextAuthOptions: NextAuthOptions = {
             return token;
         },
         session: ({ session, token }) => {
-            console.log("in session", { session, token });
-            token.accessToken;
             return {
                 ...session,
+                userId: token.id,
                 user: {
                     ...session.user,
                     role: token.role,
                 },
             };
         },
+        signIn: async ({ user, account, profile }) => {
+            if (account?.provider === "google") {
+                const prisma = new PrismaClient();
+                const googleId = profile?.sub;
+                let dbUser = await prisma.user.findUnique({
+                    where: { googleId: googleId },
+                });
+                // ユーザーが存在しない場合は新規ユーザーを作成する。
+                // TODO: 将来的に切り出してもいいかも
+                if (!dbUser) {
+                    // ユーザー情報が不足している場合はエラーページを返す。
+                    if (!user.email || !user.name || !googleId) {
+                        return "/auth/error";
+                    }
+                    dbUser = await prisma.user.create({
+                        data: {
+                            googleId,
+                            email: user.email,
+                            name: user.name,
+                        },
+                    });
+                    user.id = dbUser.id;
+                }
+            }
+            return true;
+        }
     },
 };
