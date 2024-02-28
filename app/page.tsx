@@ -1,11 +1,14 @@
-import { signIn } from 'next-auth/react';
 export default function TopPage() {
-  const handleLogin = async () => {
-    signIn("google", { callbackUrl: "/" });
-  }
-  return (
-      <div className="m-3">
-          トップページだよ
-      </div>
-  );
+	return (
+		<div>
+			<h1 className="m-3 text-3xl">Top Page</h1>
+			<h2>機能一覧</h2>
+			<ul>
+				<li className="m-3">
+					<a href="/todos">1. Todo List</a>
+				</li>
+				<li className="m-3"></li>
+			</ul>
+		</div>
+	);
 }
