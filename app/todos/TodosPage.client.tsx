@@ -5,12 +5,12 @@ import {
 	getTodos,
 	updateTodo,
 } from "@/app/todos/action";
-import { PrismaClient, Todo } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { useEffect, useState } from "react";
 
 const prisma = new PrismaClient();
 
-export default function TodosPageClient(props: { initialTodos: Todo[] }) {
+export default function TodosPageClient(props: { initialTodos: any }) {
 	const [newTodo, setNewTodo] = useState("");
 
 	const handleCheck = async (todoId: string, completed: boolean) => {
@@ -59,7 +59,7 @@ export default function TodosPageClient(props: { initialTodos: Todo[] }) {
 				</button>
 			</form>
 			<ul>
-				{props.initialTodos?.map((todo: Todo) => (
+				{props.initialTodos?.map((todo: any) => (
 					<div
 						key={todo.id}
 						className="border border-gray-300 p-3 m-3 rounded-md"
