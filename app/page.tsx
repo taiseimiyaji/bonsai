@@ -7,7 +7,6 @@ export default function TopPage() {
 				<li className="m-3">
 					<a href="/todos">1. Todo List</a>
 				</li>
-				<li className="m-3"></li>
 			</ul>
 		</div>
 	);
