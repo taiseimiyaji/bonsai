@@ -22,6 +22,11 @@ prismaクライアントの再生成
 npx prisma generate
 ```
 
+biomeの適用
+
+```shell
+npx @biomejs/biome check --apply ./app
+```
 
 
 ## プロダクトのコンセプト
