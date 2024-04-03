@@ -18,6 +18,7 @@ export const nextAuthOptions: NextAuthOptions = {
 				token.user = user;
 				const u = user as any;
 				token.role = u.role;
+				token.userId = u.id;
 			}
 			if (account) {
 				token.accessToken = account.access_token;
@@ -27,7 +28,7 @@ export const nextAuthOptions: NextAuthOptions = {
 		session: ({ session, token }) => {
 			return {
 				...session,
-				userId: token.id,
+				userId: token.userId,
 				user: {
 					...session.user,
 					role: token.role,
@@ -41,10 +42,7 @@ export const nextAuthOptions: NextAuthOptions = {
 				let dbUser = await prisma.user.findUnique({
 					where: { googleId: googleId },
 				});
-				// ユーザーが存在しない場合は新規ユーザーを作成する。
-				// TODO: 将来的に切り出してもいいかも
 				if (!dbUser) {
-					// ユーザー情報が不足している場合はエラーページを返す。
 					if (!user.email || !user.name || !googleId) {
 						return "/auth/error";
 					}
@@ -55,8 +53,9 @@ export const nextAuthOptions: NextAuthOptions = {
 							name: user.name,
 						},
 					});
-					user.id = dbUser.id;
 				}
+				// user オブジェクトにデータベースのユーザー ID を追加
+				user.id = dbUser.id;
 			}
 			return true;
 		},
