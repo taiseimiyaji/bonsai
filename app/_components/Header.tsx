@@ -1,6 +1,6 @@
 "use client";
 
-import { type Session } from "next-auth";
+import type { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
