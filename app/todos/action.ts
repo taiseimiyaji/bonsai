@@ -1,32 +1,13 @@
 "use server";
 import { PrismaClient } from "@prisma/client";
-import type { NextRequest } from "next/server";
 
 const prisma = new PrismaClient();
 
-export async function action({ request }: { request: NextRequest }) {
-	const data = await request.formData();
-	const title = data.get("title") as string;
+export async function getTodos({ userId }: { userId: string | undefined }) {
+	"use server";
 
-	if (!title) {
-		return {
-			status: 400,
-			body: { message: "Title is required" },
-		};
-	}
-
-	const todo = await prisma.todo.create({
-		data: { title, completed: false },
-	});
-
-	return new Response(null, {
-		status: 201,
-		headers: { Location: `/todos/${todo.id}` },
-	});
-}
-
-export async function getTodos() {
 	const todos = await prisma.todo.findMany({
+		where: { userId },
 		orderBy: { createdAt: "desc" },
 	});
 	// todosをシリアライズして返す
@@ -37,18 +18,21 @@ export async function getTodos() {
 			updatedAt: todo.updatedAt.toISOString(),
 		};
 	});
-	return todosFormatted;
+	return todos;
 }
 
-export async function createTodo(formData: FormData) {
+export async function createTodo(formData: FormData, userId: string) {
 	"use server";
 	const rawFormData = {
 		title: formData.get("title") as string,
 		description: formData.get("description"),
 		completed: formData.get("completed") === "true",
 	};
+	if (!userId){
+		throw new Error("User not found")
+	}
 	const todo = await prisma.todo.create({
-		data: { title: rawFormData.title, completed: false },
+		data: { title: rawFormData.title, userId:userId, completed: false },
 	});
 }
 

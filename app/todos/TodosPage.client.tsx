@@ -2,15 +2,12 @@
 import {
 	createTodo,
 	deleteTodo,
-	getTodos,
 	updateTodo,
 } from "@/app/todos/action";
 import { PrismaClient } from "@prisma/client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-const prisma = new PrismaClient();
-
-export default function TodosPageClient(props: { initialTodos: any }) {
+export default function TodosPageClient(props: { initialTodos: any, userId: string }) {
 	const [newTodo, setNewTodo] = useState("");
 
 	const handleCheck = async (todoId: string, completed: boolean) => {
@@ -25,7 +22,7 @@ export default function TodosPageClient(props: { initialTodos: any }) {
 		const formData = new FormData();
 		formData.append("title", newTodo);
 		try {
-			await createTodo(formData);
+			await createTodo(formData, props.userId);
 		} catch (e) {
 			console.error(e);
 		}
