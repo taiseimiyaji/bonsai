@@ -1,13 +1,12 @@
 "use client";
-import {
-	createTodo,
-	deleteTodo,
-	updateTodo,
-} from "@/app/todos/action";
+import { createTodo, deleteTodo, updateTodo } from "@/app/todos/action";
 import { PrismaClient } from "@prisma/client";
 import { useState } from "react";
 
-export default function TodosPageClient(props: { initialTodos: any, userId: string }) {
+export default function TodosPageClient(props: {
+	initialTodos: any;
+	userId: string;
+}) {
 	const [newTodo, setNewTodo] = useState("");
 
 	const handleCheck = async (todoId: string, completed: boolean) => {

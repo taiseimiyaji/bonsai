@@ -28,11 +28,11 @@ export async function createTodo(formData: FormData, userId: string) {
 		description: formData.get("description"),
 		completed: formData.get("completed") === "true",
 	};
-	if (!userId){
-		throw new Error("User not found")
+	if (!userId) {
+		throw new Error("User not found");
 	}
 	const todo = await prisma.todo.create({
-		data: { title: rawFormData.title, userId:userId, completed: false },
+		data: { title: rawFormData.title, userId: userId, completed: false },
 	});
 }
 
