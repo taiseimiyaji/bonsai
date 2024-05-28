@@ -8,7 +8,7 @@ export default function Header() {
 				Link Scraper
 			</Link>
 			<nav className="flex items-center gap-4">
-				<Link className="hover:underline" href="#">
+				<Link className="hover:underline" href="/scrap">
 					Categories
 				</Link>
 				<Link

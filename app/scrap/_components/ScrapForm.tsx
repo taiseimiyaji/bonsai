@@ -17,7 +17,7 @@ export default function ScrapForm() {
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="max-w-4xl mx-auto p-6 bg-gray-700 text-white rounded-lg shadow-md"
+			className="max-w-4xl mx-auto p-6 bg-gray-800 text-white rounded-lg shadow-md"
 			autoComplete="off"
 		>
 			<h1 className="text-3xl font-bold mb-6">Create a New Scrap</h1>
@@ -33,7 +33,7 @@ export default function ScrapForm() {
 					id="title"
 					value={title}
 					onChange={(e) => setTitle(e.target.value)}
-					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					autoComplete="off"
 				/>
 			</div>
@@ -48,7 +48,7 @@ export default function ScrapForm() {
 					id="description"
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
-					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					rows={4}
 					autoComplete="off"
 				/>
@@ -65,7 +65,7 @@ export default function ScrapForm() {
 					id="link"
 					value={link}
 					onChange={(e) => setLink(e.target.value)}
-					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					autoComplete="off"
 				/>
 			</div>
@@ -81,7 +81,7 @@ export default function ScrapForm() {
 					id="image"
 					value={image}
 					onChange={(e) => setImage(e.target.value)}
-					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					autoComplete="off"
 				/>
 			</div>
