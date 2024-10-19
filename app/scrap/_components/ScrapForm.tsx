@@ -1,23 +1,82 @@
 "use client";
-import type React from "react";
-import { useState } from "react";
+import React from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { useSession } from "next-auth/react";
+import { ScrapWithTimeAgo } from "@/app/api/scrapbook/[id]/route";
+import {Scrap} from "@prisma/client"; // 新しい型をインポート
 
-export default function ScrapForm() {
-	const [title, setTitle] = useState("");
-	const [description, setDescription] = useState("");
-	const [link, setLink] = useState("");
-	const [image, setImage] = useState("");
+interface FormInputs {
+	title: string;
+	description: string;
+	link: string;
+	image: string;
+}
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		// Handle form submission
-		console.log({ title, description, link, image });
+interface ScrapFormProps {
+	scrapBookId: string;
+	onScrapAdded: (newScrap: ScrapWithTimeAgo) => void; // 新しいスクラップが追加された後に呼び出す関数
+}
+
+export default function ScrapForm({ scrapBookId, onScrapAdded }: ScrapFormProps) {
+	const { register, handleSubmit, reset } = useForm<FormInputs>();
+	const { data: session } = useSession();
+
+	const onSubmit: SubmitHandler<FormInputs> = async (data) => {
+		if (!data.title) {
+			alert("Title is required");
+			return;
+		}
+
+		const newScrap: ScrapWithTimeAgo = {
+			id: "temp-id", // 一時的なIDを設定
+			userId: '',
+			title: data.title,
+			content: data.description,
+			link: data.link,
+			image: data.image,
+			ogpData: null, // 必要に応じて適切な値を設定
+			scrapBookId,
+			categoryId: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			timeAgo: "just now",
+			category: null
+		};
+
+		// ローカル状態を即座に更新
+		onScrapAdded(newScrap);
+
+		try {
+			const response = await fetch('/api/scrapbook/scrap/new', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					...data,
+					scrapBookId, // 適切なScrapBook IDを設定
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error('Network response was not ok');
+			}
+
+			const savedScrap: ScrapWithTimeAgo = await response.json();
+			console.log('Scrap created:', savedScrap);
+
+			// フォームをリセット
+			reset();
+		} catch (error) {
+			console.error(error);
+			alert('Failed to create Scrap');
+		}
 	};
 
 	return (
 		<form
-			onSubmit={handleSubmit}
-			className="max-w-4xl mx-auto p-6 bg-gray-800 text-white rounded-lg shadow-md"
+			onSubmit={handleSubmit(onSubmit)}
+			className="max-w-4xl mx-auto p-6 bg-gray-700 text-white rounded-lg"
 			autoComplete="off"
 		>
 			<h1 className="text-3xl font-bold mb-6">Create a New Scrap</h1>
@@ -26,15 +85,15 @@ export default function ScrapForm() {
 					htmlFor="title"
 					className="block text-sm font-medium text-gray-300"
 				>
-					Title
+					Title<span className="text-red-500"> *</span>
 				</label>
 				<input
 					type="text"
 					id="title"
-					value={title}
-					onChange={(e) => setTitle(e.target.value)}
-					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					{...register('title', { required: true })}
+					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					autoComplete="off"
+					required
 				/>
 			</div>
 			<div className="mb-4">
@@ -46,9 +105,8 @@ export default function ScrapForm() {
 				</label>
 				<textarea
 					id="description"
-					value={description}
-					onChange={(e) => setDescription(e.target.value)}
-					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					{...register('description')}
+					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					rows={4}
 					autoComplete="off"
 				/>
@@ -63,9 +121,8 @@ export default function ScrapForm() {
 				<input
 					type="text"
 					id="link"
-					value={link}
-					onChange={(e) => setLink(e.target.value)}
-					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					{...register('link')}
+					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					autoComplete="off"
 				/>
 			</div>
@@ -79,9 +136,8 @@ export default function ScrapForm() {
 				<input
 					type="text"
 					id="image"
-					value={image}
-					onChange={(e) => setImage(e.target.value)}
-					className="mt-1 block w-full bg-gray-800 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+					{...register('image')}
+					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					autoComplete="off"
 				/>
 			</div>

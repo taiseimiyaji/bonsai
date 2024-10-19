@@ -38,20 +38,20 @@ model Todo {
 }
 
 model Scrap {
-  id          String        @id @default(uuid())
+  id          String         @id @default(uuid())
   userId      String
-  user        User          @relation(fields: [userId], references: [id])
+  user        User           @relation(fields: [userId], references: [id])
   title       String
   content     String?
   link        String?
   image       String?
   ogpData     Json?
   scrapBookId String
-  scrapBook   ScrapBook     @relation(fields: [scrapBookId], references: [id])
-  categoryId  String
-  category    ScrapCategory @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  scrapBook   ScrapBook      @relation(fields: [scrapBookId], references: [id])
+  categoryId  String?
+  category    ScrapCategory? @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }
 
 model ScrapBook {
@@ -61,8 +61,11 @@ model ScrapBook {
   userId      String
   user        User            @relation(fields: [userId], references: [id])
   scraps      Scrap[]
+  image       String?
   links       ScrapbookLink[] @relation("SourceScrapbook")
   linkedBy    ScrapbookLink[] @relation("TargetScrapbook")
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
 model ScrapbookLink {

@@ -1,6 +1,5 @@
 "use client";
 import { createTodo, deleteTodo, updateTodo } from "@/app/todos/action";
-import { PrismaClient } from "@prisma/client";
 import { useState } from "react";
 
 export default function TodosPageClient(props: {

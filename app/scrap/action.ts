@@ -1,8 +1,5 @@
 "use server";
-
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/prisma/prisma";
 
 export async function getScrap({ userId }: { userId: string | undefined }) {
 	const scraps = await prisma.scrap.findMany({
