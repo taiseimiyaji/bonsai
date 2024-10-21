@@ -37,7 +37,7 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
         setShowForm((prevShowForm) => !prevShowForm);
     };
 
-    const handleScrapAdded = async (newScrapData: Omit<ScrapWithTimeAgo, 'id' | 'timeAgo'>) => {
+    const handleScrapAdded = async (newScrapData: Omit<ScrapWithTimeAgo, 'id' | 'timeAgo' | "createdAt" | "updatedAt">) => {
         // **楽観的更新**
         await utils.scrap.getScraps.cancel({ scrapBookId: bookId });
 
@@ -64,6 +64,8 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
 
     if (isLoading) return <div>Loading...</div>;
     if (isError) return <div>Failed to load</div>;
+
+    if (!scraps) return <div>Scrap not found</div>;
 
     return (
         <>

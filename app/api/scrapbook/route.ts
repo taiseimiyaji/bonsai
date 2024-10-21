@@ -29,7 +29,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Unauthorized User' }, { status: 401 });
         }
 
-        console.log('userId:', userId)
         const newScrapBook = await prisma.scrapBook.create({
             data: {
                 title,

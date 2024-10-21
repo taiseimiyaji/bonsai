@@ -1,8 +1,8 @@
 "use client";
 import React from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { useRouter } from 'next/navigation';  // 修正箇所
-import { useSession } from "next-auth/react";
+import { useRouter } from 'next/navigation';
+import { trpc } from "@/app/api/trpc/trpc-client"; // tRPC クライアントをインポート
 
 interface FormInputs {
     title: string;
@@ -12,42 +12,37 @@ interface FormInputs {
 
 export default function ScrapBookForm() {
     const { register, handleSubmit, reset } = useForm<FormInputs>();
-    const router = useRouter();  // ルーターを初期化
+    const router = useRouter();
 
-    const onSubmit: SubmitHandler<FormInputs> = async (data) => {
+    // tRPC のミューテーションを使用
+    const createScrapBookMutation = trpc.scrapBook.createScrapBook.useMutation({
+        onSuccess: (data) => {
+            // ミューテーションが成功した後の処理
+            console.log('ScrapBook created:', data);
+
+            // フォームをリセット
+            reset();
+
+            // 作成した ScrapBook の ID を使ってページ遷移
+            router.push(`/scrap/book/${data.id}`);
+        },
+        onError: (error) => {
+            console.error('Failed to create ScrapBook:', error);
+        },
+    });
+
+    const onSubmit: SubmitHandler<FormInputs> = (data) => {
         if (!data.title) {
             alert("Title is required");
             return;
         }
 
-        try {
-            const response = await fetch('/api/scrapbook', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-
-            // レスポンスから作成されたScrapBookのIDを取得
-            const responseData = await response.json();
-            console.log('ScrapBook created:', responseData);
-
-            const { id } = responseData;  // IDを抽出
-
-            // フォームをリセット
-            reset();
-
-            // 作成したScrapBookのIDを使ってページ遷移
-            router.push(`/scrap/book/${id}`);
-
-        } catch (error) {
-            console.error('Failed to create ScrapBook:', error);
-        }
+        // tRPC のミューテーションを呼び出す
+        createScrapBookMutation.mutate({
+            title: data.title,
+            description: data.description || '',
+            image: data.image || '',
+        });
     };
 
     return (
@@ -107,8 +102,9 @@ export default function ScrapBookForm() {
                 <button
                     type="submit"
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    disabled={createScrapBookMutation.isLoading} // ローディング状態の管理
                 >
-                    Create ScrapBook
+                    {createScrapBookMutation.isLoading ? 'Creating...' : 'Create ScrapBook'}
                 </button>
             </div>
         </form>
