@@ -17,12 +17,7 @@ export default function ScrapBookForm() {
     // tRPC のミューテーションを使用
     const createScrapBookMutation = trpc.scrapBook.createScrapBook.useMutation({
         onSuccess: (data) => {
-            // ミューテーションが成功した後の処理
-            console.log('ScrapBook created:', data);
-
-            // フォームをリセット
             reset();
-
             // 作成した ScrapBook の ID を使ってページ遷移
             router.push(`/scrap/book/${data.id}`);
         },
@@ -37,7 +32,6 @@ export default function ScrapBookForm() {
             return;
         }
 
-        // tRPC のミューテーションを呼び出す
         createScrapBookMutation.mutate({
             title: data.title,
             description: data.description || '',

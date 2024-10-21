@@ -1,17 +1,22 @@
 export interface ScrapWithTimeAgo {
     id: string;
     userId: string;
-    title: string;
-    content: string | null;
-    link: string | null;
-    image: string | null;
-    ogpData: {
+    content: string;
+    user: {
+        id: string;
+        name: string;
         image: string;
+    }
+    ogpData: {
+        link: string;
+        image: string | null;
+        title: string | null;
+        description: string | null;
     } | null;
     scrapBookId: string;
     categoryId: string | null;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: Date | string;
+    updatedAt: Date | string;
     timeAgo: string;
     category: {
         id: string;

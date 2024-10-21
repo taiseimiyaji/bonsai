@@ -1,7 +1,7 @@
 // app/scrapbook/[id]/ScrapClient.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import ScrapThread from '@/app/scrap/_components/ScrapThread';
 import ScrapForm from '@/app/scrap/_components/ScrapForm';
 import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
@@ -37,7 +37,45 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
         setShowForm((prevShowForm) => !prevShowForm);
     };
 
-    const handleScrapAdded = async (newScrapData: Omit<ScrapWithTimeAgo, 'id' | 'timeAgo' | "createdAt" | "updatedAt">) => {
+    useEffect(() => {
+        if (showForm) {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            // スクロールされ終わったらフォーカス
+            setTimeout(() => {
+                document.getElementById('content')?.focus();
+            }, 200);
+        }
+    }, [showForm]);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (!showForm && event.key === 'Enter') {
+                handleToggleForm()
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [handleToggleForm]);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (showForm && event.key === 'Escape') {
+                handleToggleForm()
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [handleToggleForm]);
+
+    const handleScrapAdded = async (newScrapData: Omit<ScrapWithTimeAgo, 'id' | 'timeAgo' | "createdAt" | "updatedAt" | "user">) => {
         // **楽観的更新**
         await utils.scrap.getScraps.cancel({ scrapBookId: bookId });
 
@@ -60,6 +98,13 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
             utils.scrap.getScraps.setData({ scrapBookId: bookId }, previousData);
             console.error('Failed to add scrap:', err);
         }
+        // 追加されたあとに画面を一番下にゆっくりスクロール
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+        // 追加されたあとに次のフォームにフォーカス
+        // すでに開いているフォームにフォーカス
+        document.getElementById('content')?.focus();
+
     };
 
     if (isLoading) return <div>Loading...</div>;
@@ -69,18 +114,28 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
 
     return (
         <>
-            {scraps.length > 0 && <ScrapThread scraps={scraps} />}
+            {scraps.length > 0 && <ScrapThread scraps={scraps}/>}
             <div className="mt-6 flex justify-end">
-                <button
-                    onClick={handleToggleForm}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-                >
-                    {showForm ? 'Cancel' : 'Add New Scrap'}
-                </button>
+                {showForm && (
+                    <button
+                        onClick={handleToggleForm}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
+                    >
+                        Cancel
+                    </button>
+                )}
+                {!showForm && (
+                    <button
+                        onClick={handleToggleForm}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                        Add Scrap
+                    </button>
+                )}
             </div>
             {showForm && (
                 <div className="mt-6">
-                    <ScrapForm scrapBookId={bookId} onScrapAdded={handleScrapAdded} />
+                    <ScrapForm scrapBookId={bookId} onScrapAdded={handleScrapAdded}/>
                 </div>
             )}
         </>

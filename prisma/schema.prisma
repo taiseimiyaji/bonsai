@@ -19,6 +19,7 @@ model User {
   googleId  String      @unique
   email     String      @unique
   name      String?
+  image     String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   Todo      Todo[]
@@ -41,10 +42,7 @@ model Scrap {
   id          String         @id @default(uuid())
   userId      String
   user        User           @relation(fields: [userId], references: [id])
-  title       String
   content     String?
-  link        String?
-  image       String?
   ogpData     Json?
   scrapBookId String
   scrapBook   ScrapBook      @relation(fields: [scrapBookId], references: [id])

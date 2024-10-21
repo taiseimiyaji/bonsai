@@ -1,32 +1,26 @@
 "use client";
-import React from "react";
+import React, {useCallback, useEffect} from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { ScrapWithTimeAgo } from "@/app/types/ScrapWithTimeAgo";
 import {useSession} from "next-auth/react";
 
 interface FormInputs {
 	title: string;
-	description: string;
+	content: string;
 	link: string;
 	image: string;
 }
 
 interface ScrapFormProps {
 	scrapBookId: string;
-	onScrapAdded: (newScrapData: Omit<ScrapWithTimeAgo, "id" | "timeAgo" | "createdAt" | "updatedAt">) => void;
+	onScrapAdded: (newScrapData: Omit<ScrapWithTimeAgo, "id" | "timeAgo" | "createdAt" | "updatedAt" | "user">) => void;
 }
 
 export default function ScrapForm({ scrapBookId, onScrapAdded }: ScrapFormProps) {
-	const { register, handleSubmit, reset } = useForm<FormInputs>();
+	const { register, handleSubmit, reset, formState: { errors } } = useForm<FormInputs>();
 	const { data: session } = useSession();
 
-	const onSubmit: SubmitHandler<FormInputs> = (data) => {
-
-
-		if (!data.title) {
-			alert("Title is required");
-			return;
-		}
+	const onSubmit: SubmitHandler<FormInputs> = useCallback((data) => {
 
 		if (!session?.userId) {
 			alert("Unauthorized User");
@@ -36,10 +30,7 @@ export default function ScrapForm({ scrapBookId, onScrapAdded }: ScrapFormProps)
 		// 親コンポーネントにデータを渡す
 		onScrapAdded({
 			scrapBookId,
-			title: data.title,
-			content: data.description,
-			link: data.link,
-			image: data.image,
+			content: data.content,
 			ogpData: null, // 必要に応じて適切な値を設定
 			categoryId: null,
 			userId: session.userId,
@@ -48,7 +39,22 @@ export default function ScrapForm({ scrapBookId, onScrapAdded }: ScrapFormProps)
 
 		// フォームをリセット
 		reset();
-	};
+	}, [onScrapAdded, scrapBookId, session, reset]);
+
+	// Cmd + Enter で送信
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+				handleSubmit(onSubmit)();
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [handleSubmit, onSubmit]);
 
 	return (
 		<form
@@ -59,64 +65,27 @@ export default function ScrapForm({ scrapBookId, onScrapAdded }: ScrapFormProps)
 			<h1 className="text-3xl font-bold mb-6">Create a New Scrap</h1>
 			<div className="mb-4">
 				<label
-					htmlFor="title"
-					className="block text-sm font-medium text-gray-300"
-				>
-					Title<span className="text-red-500"> *</span>
-				</label>
-				<input
-					type="text"
-					id="title"
-					{...register('title', { required: true })}
-					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
-					autoComplete="off"
-					required
-				/>
-			</div>
-			<div className="mb-4">
-				<label
-					htmlFor="description"
+					htmlFor="content"
 					className="block text-sm font-medium text-gray-300"
 				>
 					Description
 				</label>
 				<textarea
-					id="description"
-					{...register('description')}
+					id="content"
+					{...register('content', {
+						required: 'Content is required',
+						pattern: {
+							value: /\S/,
+							message: 'Content is required',
+						}
+					})}
 					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
 					rows={4}
 					autoComplete="off"
 				/>
-			</div>
-			<div className="mb-4">
-				<label
-					htmlFor="link"
-					className="block text-sm font-medium text-gray-300"
-				>
-					Link
-				</label>
-				<input
-					type="text"
-					id="link"
-					{...register('link')}
-					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
-					autoComplete="off"
-				/>
-			</div>
-			<div className="mb-4">
-				<label
-					htmlFor="image"
-					className="block text-sm font-medium text-gray-300"
-				>
-					Image URL
-				</label>
-				<input
-					type="text"
-					id="image"
-					{...register('image')}
-					className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
-					autoComplete="off"
-				/>
+				{errors.content && (
+					<span className="text-red-500 text-sm">{errors.content.message}</span>
+				)}
 			</div>
 			<div className="flex justify-end">
 				<button

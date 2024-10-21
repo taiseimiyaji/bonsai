@@ -50,7 +50,14 @@ export const nextAuthOptions: NextAuthOptions = {
 							googleId,
 							email: user.email,
 							name: user.name,
+							image: user.image,
 						},
+					});
+				}
+				if(user.image && dbUser.image !== user.image) {
+					await prisma.user.update({
+						where: { id: dbUser.id },
+						data: { image: user.image },
 					});
 				}
 				// user オブジェクトにデータベースのユーザー ID を追加

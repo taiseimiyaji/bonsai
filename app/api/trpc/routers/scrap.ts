@@ -1,21 +1,22 @@
-// app/api/trpc/routers/scrap.ts
 import { z } from 'zod';
 import { prisma } from '@/prisma/prisma';
 import { formatDistanceToNow } from 'date-fns';
 import { TRPCError } from '@trpc/server';
+import ogs from 'open-graph-scraper'; // OGPデータを取得するライブラリ
 
-import {publicProcedure, router} from "@/app/api/trpc/init";
+import { publicProcedure, router } from "@/app/api/trpc/init";
 
+// OGPデータのスキーマ定義
 const OGPDataSchema = z.object({
-    image: z.string(),
+    link: z.string(),
+    image: z.string().nullable(),
+    title: z.string().nullable(),
+    description: z.string().nullable(),
 });
+
 const createScrapInput = z.object({
-    title: z.string().min(1),
     scrapBookId: z.string().min(1),
-    content: z.string().nullable().optional(),
-    link: z.string().nullable().optional(),
-    image: z.string().nullable().optional(),
-    ogpData: z.any().optional(),
+    content: z.string().min(1),
     categoryId: z.string().nullable().optional(),
 });
 
@@ -35,7 +36,10 @@ export const scrapRouter = router({
 
                 const scraps = await prisma.scrap.findMany({
                     where: { scrapBookId: input.scrapBookId },
-                    include: { category: true },
+                    include: {
+                        category: true,
+                        user: true,
+                    },
                 });
 
                 const formattedScraps = scraps.map((scrap) => {
@@ -44,6 +48,11 @@ export const scrapRouter = router({
                         ...scrap,
                         timeAgo: formatDistanceToNow(new Date(scrap.createdAt), { addSuffix: true }),
                         ogpData: ogpDataValidation.success ? ogpDataValidation.data : null, // バリデーション成功時はデータ、失敗時はnull
+                        user: {
+                            id: scrap.user.id,
+                            name: scrap.user.name || '',
+                            image: scrap.user.image || '',
+                        }
                     };
                 });
                 const result = scrapBook ? formattedScraps : null;
@@ -58,21 +67,69 @@ export const scrapRouter = router({
         .mutation(async ({ input, ctx }) => {
             const { session } = ctx;
 
-            // セッションがない場合はエラーを投げる
+            // セッションがない場合、エラーを投げる
             if (!session || !session.user) {
                 throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized User' });
             }
 
             const userId = session.userId;
 
-            // Prisma に渡すデータを準備
+            // contentから最初のリンクを抽出する関数
+            function extractFirstLink(content: string): string | null {
+                const urlRegex = /(https?:\/\/[^\s]+)/;
+                const match = content.match(urlRegex);
+                return match ? match[0] : null;
+            }
+
+            // OGPデータを取得する関数
+            async function fetchOgpData(url: string): Promise<{
+                title: string;
+                description: string;
+                image: string;
+            }> {
+                try {
+                    const { result } = await ogs({ url });
+                    return {
+                        title: result.ogTitle || '',
+                        description: result.ogDescription || '',
+                        image: result.ogImage?.at(0)?.url || '',
+                    };
+                } catch (error) {
+                    console.error('OGPデータの取得エラー:', error);
+                    return {
+                        title: '',
+                        description: '',
+                        image: '',
+                    };
+                }
+            }
+
+            // contentとogpDataの初期化
+            let contentWithoutLink = input.content || '';
+            let ogpData = {};
+
+            // contentから最初のリンクを抽出
+            const firstLink = extractFirstLink(contentWithoutLink);
+
+            if (firstLink) {
+                // 抽出したリンクのOGPデータを取得
+                const fetchedOgpData = await fetchOgpData(firstLink);
+
+                // OGPデータを設定し、リンクをogpDataに保存
+                ogpData = {
+                    link: firstLink,
+                    ...fetchedOgpData,
+                };
+
+                // contentからリンクを削除
+                contentWithoutLink = contentWithoutLink.replace(firstLink, '').trim();
+            }
+
+            // Prismaに渡すデータを準備
             const data: any = {
-                title: input.title,
                 scrapBook: { connect: { id: input.scrapBookId } },
-                content: input.content || '',
-                link: input.link || '',
-                image: input.image || '',
-                ogpData: input.ogpData || {},
+                content: contentWithoutLink,
+                ogpData: ogpData,
                 user: { connect: { id: userId } },
             };
 
@@ -87,7 +144,7 @@ export const scrapRouter = router({
 
                 return newScrap;
             } catch (error) {
-                console.error('Error creating scrap:', error);
+                console.error('Scrap作成エラー:', error);
                 throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' });
             }
         }),

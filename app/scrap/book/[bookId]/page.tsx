@@ -1,8 +1,6 @@
 // app/scrapbook/[id]/page.tsx
 import { notFound } from 'next/navigation';
 import ScrapClient from './ScrapClient';
-import {createTRPCContext} from "@/app/api/trpc/init";
-import {appRouter} from "@/app/api/trpc/routers/_app";
 import {trpcCaller} from "@/app/api/trpc/trpc-server";
 
 export default async function ScrapBookPage({ params }: { params: { bookId: string } }) {
