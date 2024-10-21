@@ -2,55 +2,68 @@
 'use client';
 
 import React, { useState } from 'react';
-import useSWR from 'swr';
 import ScrapThread from '@/app/scrap/_components/ScrapThread';
 import ScrapForm from '@/app/scrap/_components/ScrapForm';
-import { ScrapWithTimeAgo } from '@/app/api/scrapbook/[id]/route';
+import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
+import {trpc} from "@/app/api/trpc/trpc-client";
 
 interface ScrapClientProps {
     scraps: ScrapWithTimeAgo[];
     bookId: string;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
 export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClientProps) {
     const [showForm, setShowForm] = useState(false);
 
-    const { data: scraps, error, mutate } = useSWR<ScrapWithTimeAgo[]>(
-        `/api/scrapbook/${bookId}`,
-        fetcher,
+    const utils = trpc.useContext();
+
+    // **tRPCのuseQueryでデータ取得**
+    const { data: scraps = initialScraps, isLoading, isError } = trpc.scrap.getScraps.useQuery(
+        { scrapBookId: bookId },
         {
-            fallbackData: initialScraps,
+            initialData: initialScraps,
         }
     );
+
+    // **tRPCのuseMutationでデータ追加**
+    const addScrapMutation = trpc.scrap.addScrap.useMutation({
+        // 成功時にクエリを無効化して再フェッチ
+        onSuccess: () => {
+            utils.scrap.getScraps.invalidate({ scrapBookId: bookId });
+        },
+    });
 
     const handleToggleForm = () => {
         setShowForm((prevShowForm) => !prevShowForm);
     };
 
-    const handleScrapAdded = async (newScrap: ScrapWithTimeAgo) => {
-        // ローカル状態を楽観的に更新
-        mutate((currentData) => [...(currentData || []), newScrap], false);
+    const handleScrapAdded = async (newScrapData: Omit<ScrapWithTimeAgo, 'id' | 'timeAgo'>) => {
+        // **楽観的更新**
+        await utils.scrap.getScraps.cancel({ scrapBookId: bookId });
 
-        // 新しいスクラップをバックエンドに送信
+        const previousData = utils.scrap.getScraps.getData({ scrapBookId: bookId });
+
+        utils.scrap.getScraps.setData({ scrapBookId: bookId }, (oldData) => [
+            ...(oldData || []),
+            {
+                ...newScrapData,
+                id: 'temp-id', // 一時的なID
+                timeAgo: 'just now',
+            },
+        ]);
+
         try {
-            await fetch(`/api/scrapbook/${bookId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newScrap),
-            });
-            // 成功後にデータを再フェッチ
-            mutate();
+            await addScrapMutation.mutateAsync({ scrapBookId: bookId, ...newScrapData });
+            // onSuccessで再フェッチが行われます
         } catch (err) {
-            // エラーハンドリングやロールバック
+            // エラー時にロールバック
+            utils.scrap.getScraps.setData({ scrapBookId: bookId }, previousData);
             console.error('Failed to add scrap:', err);
-            mutate();
         }
     };
 
-    if (error) return <div>Failed to load</div>;
-    if (!scraps) return <div>Loading...</div>;
+    if (isLoading) return <div>Loading...</div>;
+    if (isError) return <div>Failed to load</div>;
 
     return (
         <>

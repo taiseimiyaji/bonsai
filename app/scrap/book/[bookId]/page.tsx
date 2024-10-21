@@ -1,29 +1,27 @@
 // app/scrapbook/[id]/page.tsx
 import { notFound } from 'next/navigation';
 import ScrapClient from './ScrapClient';
-import { ScrapWithTimeAgo } from '@/app/api/scrapbook/[id]/route';
+import {createTRPCContext} from "@/app/api/trpc/init";
+import {appRouter} from "@/app/api/trpc/routers/_app";
+import {trpcCaller} from "@/app/api/trpc/trpc-server";
 
-export default async function ScrapBookPage({ params }) {
+export default async function ScrapBookPage({ params }: { params: { bookId: string } }) {
     const { bookId: bookId } = params;
 
-    // サーバー側でデータをフェッチ
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/scrapbook/${bookId}`, {
-        cache: 'no-store',
+    const scraps = await trpcCaller(async (caller) => {
+        return caller.scrap.getScraps({ scrapBookId: bookId });
     });
 
-    if (!res) {
+    if (!scraps) {
         // エラーハンドリングまたは404ページを表示
         return notFound();
     }
-
-    const scrapBook: ScrapWithTimeAgo[] = await res.json();
-
     return (
         <div className="flex flex-col min-h-[100dvh]">
             <main className="flex-1 bg-gray-100 dark:bg-gray-700 p-6">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-3xl font-bold mb-6">Scrap Threads for Book {bookId}</h1>
-                    <ScrapClient scraps={scrapBook} bookId={bookId} />
+                    <ScrapClient scraps={scraps} bookId={bookId} />
                 </div>
             </main>
         </div>

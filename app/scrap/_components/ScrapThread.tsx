@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import UserIcon from "@/app/scrap/_components/UserIcon";
 import Link from "next/link";
-import { ScrapWithTimeAgo } from "@/app/api/scrapbook/[id]/route";
+import {ScrapWithTimeAgo} from "@/app/types/ScrapWithTimeAgo";
 
 interface ScrapThreadProps {
     scraps: ScrapWithTimeAgo[];

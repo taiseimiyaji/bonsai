@@ -1,9 +1,8 @@
 "use client";
 import React from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { useSession } from "next-auth/react";
-import { ScrapWithTimeAgo } from "@/app/api/scrapbook/[id]/route";
-import {Scrap} from "@prisma/client"; // 新しい型をインポート
+import { ScrapWithTimeAgo } from "@/app/types/ScrapWithTimeAgo";
+import {useSession} from "next-auth/react";
 
 interface FormInputs {
 	title: string;
@@ -14,63 +13,41 @@ interface FormInputs {
 
 interface ScrapFormProps {
 	scrapBookId: string;
-	onScrapAdded: (newScrap: ScrapWithTimeAgo) => void; // 新しいスクラップが追加された後に呼び出す関数
+	onScrapAdded: (newScrapData: Omit<ScrapWithTimeAgo, "id" | "timeAgo" | "createdAt" | "updatedAt">) => void;
 }
 
 export default function ScrapForm({ scrapBookId, onScrapAdded }: ScrapFormProps) {
 	const { register, handleSubmit, reset } = useForm<FormInputs>();
 	const { data: session } = useSession();
 
-	const onSubmit: SubmitHandler<FormInputs> = async (data) => {
+	const onSubmit: SubmitHandler<FormInputs> = (data) => {
+
+
 		if (!data.title) {
 			alert("Title is required");
 			return;
 		}
 
-		const newScrap: ScrapWithTimeAgo = {
-			id: "temp-id", // 一時的なIDを設定
-			userId: '',
+		if (!session?.userId) {
+			alert("Unauthorized User");
+			return;
+		}
+
+		// 親コンポーネントにデータを渡す
+		onScrapAdded({
+			scrapBookId,
 			title: data.title,
 			content: data.description,
 			link: data.link,
 			image: data.image,
 			ogpData: null, // 必要に応じて適切な値を設定
-			scrapBookId,
 			categoryId: null,
-			createdAt: new Date(),
-			updatedAt: new Date(),
-			timeAgo: "just now",
-			category: null
-		};
+			userId: session.userId,
+			category: null,
+		});
 
-		// ローカル状態を即座に更新
-		onScrapAdded(newScrap);
-
-		try {
-			const response = await fetch('/api/scrapbook/scrap/new', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					...data,
-					scrapBookId, // 適切なScrapBook IDを設定
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error('Network response was not ok');
-			}
-
-			const savedScrap: ScrapWithTimeAgo = await response.json();
-			console.log('Scrap created:', savedScrap);
-
-			// フォームをリセット
-			reset();
-		} catch (error) {
-			console.error(error);
-			alert('Failed to create Scrap');
-		}
+		// フォームをリセット
+		reset();
 	};
 
 	return (
