@@ -8,6 +8,7 @@ interface FormInputs {
     title: string;
     description: string;
     image: string;
+    status: "PUBLIC" | "PRIVATE"; // ステータスをフォームに追加
 }
 
 export default function ScrapBookForm() {
@@ -36,6 +37,7 @@ export default function ScrapBookForm() {
             title: data.title,
             description: data.description || '',
             image: data.image || '',
+            status: data.status, // ステータスを送信データに含める
         });
     };
 
@@ -91,6 +93,23 @@ export default function ScrapBookForm() {
                     className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
                     autoComplete="off"
                 />
+            </div>
+            <div className="mb-4">
+                <label
+                    htmlFor="status"
+                    className="block text-sm font-medium text-gray-300"
+                >
+                    Status
+                </label>
+                <select
+                    id="status"
+                    {...register('status', { required: true })}
+                    className="mt-1 block w-full bg-gray-700 border-0 border-b-2 border-gray-600 focus:border-transparent focus:outline-none focus:ring-0 text-white appearance-none caret-white"
+                    defaultValue="PRIVATE"
+                >
+                    <option value="PUBLIC">Public</option>
+                    <option value="PRIVATE">Private</option>
+                </select>
             </div>
             <div className="flex justify-end">
                 <button

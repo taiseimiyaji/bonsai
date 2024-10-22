@@ -10,11 +10,14 @@ export const scrapBookRouter = router({
                 id: z.string().min(1),
             })
         )
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
             try {
                 const scrapBook = await prisma.scrapBook.findUnique({
                     where: {
                         id: input.id,
+                    },
+                    include: {
+                        user: true,
                     },
                 });
 
@@ -22,7 +25,27 @@ export const scrapBookRouter = router({
                     throw new TRPCError({ code: 'NOT_FOUND', message: 'ScrapBook not found' });
                 }
 
-                return scrapBook;
+                if (scrapBook.status === 'PRIVATE') {
+                    const { session } = ctx;
+
+                    if (!session || !session.user || !session.userId) {
+                        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized User' });
+                    }
+
+                    if (session.userId !== scrapBook.userId) {
+                        throw new TRPCError({ code: 'FORBIDDEN', message: 'Forbidden' });
+                    }
+                }
+
+                return {
+                    ...scrapBook,
+                    user: {
+                        id: scrapBook.user.id,
+                        name: scrapBook.user.name || '',
+                        image: scrapBook.user.image || '',
+                    },
+                }
+                    ;
             } catch (error) {
                 console.error('Error fetching ScrapBook:', error);
                 throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' });
@@ -32,9 +55,10 @@ export const scrapBookRouter = router({
     createScrapBook: publicProcedure
         .input(
             z.object({
-                title: z.string().nonempty('Title is required'),
+                title: z.string().min(1),
                 description: z.string().optional(),
                 image: z.string().optional(),
+                status: z.enum(['PUBLIC', 'PRIVATE']),
             })
         )
         .mutation(async ({ input, ctx }) => {
@@ -52,6 +76,7 @@ export const scrapBookRouter = router({
                         title: input.title,
                         description: input.description || '',
                         image: input.image || '',
+                        status: input.status,
                         userId,
                     },
                 });
@@ -59,6 +84,69 @@ export const scrapBookRouter = router({
                 return newScrapBook;
             } catch (error) {
                 console.error('Error creating ScrapBook:', error);
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' });
+            }
+        }),
+    getScrapBooks: publicProcedure
+        .query(async ({ ctx }) => {
+            const { session } = ctx;
+
+            // ユーザーがログインしているか確認
+            if (!session || !session.user || !session.userId) {
+                throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized User' });
+            }
+
+            const userId = session.userId;
+
+            try {
+                // ログインユーザーの ScrapBook の一覧を取得
+                const scrapBooks = await prisma.scrapBook.findMany({
+                    where: {
+                        userId,
+                    },
+                    include: {
+                        user: true,
+                    },
+                    orderBy: {
+                        createdAt: 'desc', // 作成日順に並べる場合
+                    },
+                });
+
+                return scrapBooks;
+            } catch (error) {
+                console.error('Error fetching ScrapBooks:', error);
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' });
+            }
+        }),
+    getPublicScrapBooks: publicProcedure
+        .query(async () => {
+            try {
+                // ログインユーザーの ScrapBook の一覧を取得
+                const scrapBooks = await prisma.scrapBook.findMany({
+                    where: {
+                        status: 'PUBLIC',
+                    },
+                    include: {
+                        user: true,
+                    },
+                    orderBy: {
+                        createdAt: 'desc', // 作成日順に並べる場合
+                    },
+                });
+
+                const formattedScrapBooks = scrapBooks.map((scrapBook) => {
+                    return {
+                        ...scrapBook,
+                        user: {
+                            id: scrapBook.user.id,
+                            name: scrapBook.user.name || '',
+                            image: scrapBook.user.image || '',
+                        },
+                    };
+                });
+                return formattedScrapBooks || [];
+            } catch (error) {
+                console.error('Error fetching ScrapBooks:', error);
                 throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' });
             }
         }),

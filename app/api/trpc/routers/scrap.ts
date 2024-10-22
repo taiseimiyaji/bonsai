@@ -25,14 +25,15 @@ export const scrapRouter = router({
         .input(z.object({ scrapBookId: z.string() }))
         .query(async ({ input, ctx }) => {
             const { session } = ctx;
-            if (!session) {
-                throw new TRPCError({ code: 'UNAUTHORIZED' });
-            }
 
             try {
                 const scrapBook = await prisma.scrapBook.findUnique({
                     where: { id: input.scrapBookId },
                 });
+
+                if (!session && scrapBook?.status === 'PRIVATE') {
+                    throw new TRPCError({ code: 'UNAUTHORIZED' });
+                }
 
                 const scraps = await prisma.scrap.findMany({
                     where: { scrapBookId: input.scrapBookId },

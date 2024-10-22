@@ -1,4 +1,3 @@
-// app/scrapbook/[id]/ScrapClient.tsx
 'use client';
 
 import React, {useEffect, useState} from 'react';
@@ -10,9 +9,15 @@ import {trpc} from "@/app/api/trpc/trpc-client";
 interface ScrapClientProps {
     scraps: ScrapWithTimeAgo[];
     bookId: string;
+    isOwner: boolean;
 }
 
-export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClientProps) {
+export default function ScrapClient(
+    {
+        scraps: initialScraps,
+        bookId,
+        isOwner,
+    }: ScrapClientProps) {
     const [showForm, setShowForm] = useState(false);
 
     const utils = trpc.useContext();
@@ -25,7 +30,6 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
         }
     );
 
-    // **tRPCのuseMutationでデータ追加**
     const addScrapMutation = trpc.scrap.addScrap.useMutation({
         // 成功時にクエリを無効化して再フェッチ
         onSuccess: () => {
@@ -116,7 +120,7 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
         <>
             {scraps.length > 0 && <ScrapThread scraps={scraps}/>}
             <div className="mt-6 flex justify-end">
-                {showForm && (
+                {showForm && isOwner && (
                     <button
                         onClick={handleToggleForm}
                         className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
@@ -124,7 +128,7 @@ export default function ScrapClient({ scraps: initialScraps, bookId }: ScrapClie
                         Cancel
                     </button>
                 )}
-                {!showForm && (
+                {!showForm && isOwner &&(
                     <button
                         onClick={handleToggleForm}
                         className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
