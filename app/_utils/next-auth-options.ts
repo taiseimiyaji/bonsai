@@ -1,7 +1,7 @@
 import GoogleProvider from "next-auth/providers/google";
 
-import { PrismaClient } from "@prisma/client";
 import type { NextAuthOptions } from "next-auth";
+import {prisma} from "@/prisma/prisma";
 
 export const nextAuthOptions: NextAuthOptions = {
 	debug: true,
@@ -31,13 +31,13 @@ export const nextAuthOptions: NextAuthOptions = {
 				userId: token.userId,
 				user: {
 					...session.user,
+					userId: token.userId,
 					role: token.role,
 				},
 			};
 		},
 		signIn: async ({ user, account, profile }) => {
 			if (account?.provider === "google") {
-				const prisma = new PrismaClient();
 				const googleId = profile?.sub;
 				let dbUser = await prisma.user.findUnique({
 					where: { googleId: googleId },
@@ -51,7 +51,14 @@ export const nextAuthOptions: NextAuthOptions = {
 							googleId,
 							email: user.email,
 							name: user.name,
+							image: user.image,
 						},
+					});
+				}
+				if(user.image && dbUser.image !== user.image) {
+					await prisma.user.update({
+						where: { id: dbUser.id },
+						data: { image: user.image },
 					});
 				}
 				// user オブジェクトにデータベースのユーザー ID を追加

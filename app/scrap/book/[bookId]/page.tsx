@@ -1,0 +1,37 @@
+import { notFound } from 'next/navigation';
+import ScrapClient from './ScrapClient';
+import {trpcCaller} from "@/app/api/trpc/trpc-server";
+import {getServerSession} from "next-auth/next";
+import {nextAuthOptions} from "@/app/_utils/next-auth-options";
+
+export default async function ScrapBookPage({ params }: { params: { bookId: string } }) {
+    const { bookId: bookId } = params;
+
+    const scrapBook = await trpcCaller(async (caller) => {
+        return caller.scrapBook.getScrapBookById({ id: bookId });
+    });
+
+    const scraps = await trpcCaller(async (caller) => {
+        return caller.scrap.getScraps({ scrapBookId: bookId });
+    });
+
+    const session = await getServerSession(nextAuthOptions);
+    console.log(session);
+
+    const isOwner = session?.userId === scrapBook.user.id;
+
+    if (!scraps) {
+        // エラーハンドリングまたは404ページを表示
+        return notFound();
+    }
+    return (
+        <div className="flex flex-col min-h-[100dvh]">
+            <main className="flex-1 bg-gray-100 dark:bg-gray-700 p-6">
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-3xl font-bold mb-6">{scrapBook.title}</h1>
+                    <ScrapClient scraps={scraps} bookId={bookId} isOwner={isOwner} />
+                </div>
+            </main>
+        </div>
+    );
+}

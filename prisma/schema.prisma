@@ -15,13 +15,16 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  googleId  String   @unique
-  email     String   @unique
+  id        String      @id @default(uuid())
+  googleId  String      @unique
+  email     String      @unique
   name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  image     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   Todo      Todo[]
+  Scrap     Scrap[]
+  ScrapBook ScrapBook[]
 }
 
 model Todo {
@@ -33,4 +36,55 @@ model Todo {
   user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Scrap {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  content     String?
+  ogpData     Json?
+  scrapBookId String
+  scrapBook   ScrapBook      @relation(fields: [scrapBookId], references: [id])
+  categoryId  String?
+  category    ScrapCategory? @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ScrapBook {
+  id          String          @id @default(uuid())
+  title       String
+  description String?
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  scraps      Scrap[]
+  image       String?
+  links       ScrapbookLink[] @relation("SourceScrapbook")
+  linkedBy    ScrapbookLink[] @relation("TargetScrapbook")
+  status      ScrapBookStatus @default(PRIVATE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+enum ScrapBookStatus {
+  PUBLIC
+  PRIVATE
+}
+
+model ScrapbookLink {
+  id                String    @id @default(uuid())
+  sourceScrapbookId String
+  targetScrapbookId String
+  createdAt         DateTime  @default(now())
+  sourceScrapbook   ScrapBook @relation("SourceScrapbook", fields: [sourceScrapbookId], references: [id])
+  targetScrapbook   ScrapBook @relation("TargetScrapbook", fields: [targetScrapbookId], references: [id])
+
+  @@unique([sourceScrapbookId, targetScrapbookId])
+}
+
+model ScrapCategory {
+  id     String  @id @default(uuid())
+  name   String  @unique
+  scraps Scrap[]
 }

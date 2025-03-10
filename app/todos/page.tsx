@@ -1,12 +1,7 @@
 import { nextAuthOptions } from "@/app/_utils/next-auth-options";
 import { getTodos } from "@/app/todos/action";
-import { PrismaClient } from "@prisma/client";
 import { getServerSession } from "next-auth";
-import { getSession } from "next-auth/react";
-import { router } from "next/client";
 import TodosPageClient from "./TodosPage.client";
-
-const prisma = new PrismaClient();
 
 export default async function TodosIndexPage() {
 	const session = await getServerSession(nextAuthOptions);
