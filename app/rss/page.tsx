@@ -54,6 +54,14 @@ export default async function RssPage() {
                   最新記事
                 </Link>
               </li>
+              <li>
+                <Link 
+                  href="/rss/info" 
+                  className="block p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                >
+                  情報ダッシュボード
+                </Link>
+              </li>
               {isLoggedIn && (
                 <li>
                   <Link 

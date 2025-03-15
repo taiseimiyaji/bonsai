@@ -69,10 +69,10 @@ const adminProcedure = publicProcedure.use(isAdmin);
 const formatArticle = (article: any) => {
   return {
     ...article,
-    publishedAt: article.publishedAt.toISOString(),
-    createdAt: article.createdAt.toISOString(),
-    updatedAt: article.updatedAt.toISOString(),
-    timeAgo: formatDistanceToNow(new Date(article.publishedAt), { 
+    publishedAt: article.publishedAt ? article.publishedAt.toISOString() : new Date().toISOString(),
+    createdAt: article.createdAt ? article.createdAt.toISOString() : new Date().toISOString(),
+    updatedAt: article.updatedAt ? article.updatedAt.toISOString() : new Date().toISOString(),
+    timeAgo: formatDistanceToNow(new Date(article.publishedAt || new Date()), { 
       addSuffix: true,
       locale: ja
     }),
@@ -84,8 +84,8 @@ const formatFeed = (feed: any) => {
   return {
     ...feed,
     lastFetched: feed.lastFetched ? feed.lastFetched.toISOString() : null,
-    createdAt: feed.createdAt.toISOString(),
-    updatedAt: feed.updatedAt.toISOString(),
+    createdAt: feed.createdAt ? feed.createdAt.toISOString() : new Date().toISOString(),
+    updatedAt: feed.updatedAt ? feed.updatedAt.toISOString() : new Date().toISOString(),
   };
 };
 
@@ -106,7 +106,26 @@ export const rssRouter = router({
         });
       }
       
-      return result.value.map(formatArticle);
+      // Prismaからフィード情報を取得して記事に追加
+      const { prisma } = await import('@/prisma/prisma');
+      const articles = result.value;
+      const feedIds = [...new Set(articles.map(article => article.feedId))];
+      
+      const feeds = await prisma.rssFeed.findMany({
+        where: { id: { in: feedIds } }
+      });
+      
+      const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
+      
+      const articlesWithFeed = articles.map(article => {
+        const feed = feedMap.get(article.feedId as string);
+        return {
+          ...formatArticle(article),
+          feed: feed ? { title: feed.title, id: feed.id } : undefined
+        };
+      });
+      
+      return articlesWithFeed;
     }),
 
   // ユーザーのフィードと公開フィードの記事を取得
@@ -124,7 +143,26 @@ export const rssRouter = router({
         });
       }
       
-      return result.value.map(formatArticle);
+      // Prismaからフィード情報を取得して記事に追加
+      const { prisma } = await import('@/prisma/prisma');
+      const articles = result.value;
+      const feedIds = [...new Set(articles.map(article => article.feedId))];
+      
+      const feeds = await prisma.rssFeed.findMany({
+        where: { id: { in: feedIds } }
+      });
+      
+      const feedMap = new Map(feeds.map(feed => [feed.id, feed]));
+      
+      const articlesWithFeed = articles.map(article => {
+        const feed = feedMap.get(article.feedId as string);
+        return {
+          ...formatArticle(article),
+          feed: feed ? { title: feed.title, id: feed.id } : undefined
+        };
+      });
+      
+      return articlesWithFeed;
     }),
 
   // 特定のフィードの記事を取得
@@ -142,7 +180,22 @@ export const rssRouter = router({
         });
       }
       
-      return result.value.map(formatArticle);
+      // フィード情報を取得
+      const { prisma } = await import('@/prisma/prisma');
+      const feed = await prisma.rssFeed.findUnique({
+        where: { id: input.feedId }
+      });
+      
+      // 記事にフィード情報を追加
+      const articles = result.value;
+      const articlesWithFeed = articles.map(article => {
+        return {
+          ...formatArticle(article),
+          feed: feed ? { title: feed.title, id: feed.id } : undefined
+        };
+      });
+      
+      return articlesWithFeed;
     }),
 
   // 公開フィードの一覧を取得
