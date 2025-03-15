@@ -24,6 +24,7 @@
 		"react": "^18",
 		"react-dom": "^18",
 		"react-hook-form": "^7.51.5",
+		"rss-parser": "^3.13.0",
 		"superjson": "^2.2.1",
 		"swr": "^2.2.5",
 		"zod": "^3.23.8"
