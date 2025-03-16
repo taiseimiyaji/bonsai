@@ -1,7 +1,7 @@
 export interface ScrapWithTimeAgo {
     id: string;
     userId: string;
-    content: string;
+    content: string | null;
     user: {
         id: string;
         name: string;
@@ -15,8 +15,8 @@ export interface ScrapWithTimeAgo {
     } | null;
     scrapBookId: string;
     categoryId: string | null;
-    createdAt: Date | string;
-    updatedAt: Date | string;
+    createdAt: string;
+    updatedAt: string;
     timeAgo: string;
     category: {
         id: string;

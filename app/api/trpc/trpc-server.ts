@@ -7,3 +7,18 @@ export async function trpcCaller<T>(callback: (caller: ReturnType<typeof appRout
     const caller = appRouter.createCaller(context);
     return callback(caller);
 }
+
+// サーバーサイドでのtrpcクライアント
+export const serverClient = {
+    rss: {
+        getPublicFeeds: async () => {
+            return trpcCaller(caller => caller.rss.getPublicFeeds());
+        },
+        updateAllFeeds: async () => {
+            return trpcCaller(caller => caller.rss.updateAllFeeds());
+        },
+        getUserFeeds: async () => {
+            return trpcCaller(caller => caller.rss.getUserFeeds());
+        }
+    }
+};

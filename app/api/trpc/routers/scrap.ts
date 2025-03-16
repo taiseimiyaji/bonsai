@@ -16,7 +16,7 @@ const OGPDataSchema = z.object({
 
 const createScrapInput = z.object({
     scrapBookId: z.string().min(1),
-    content: z.string().min(1),
+    content: z.string().min(1).nullable(),
     categoryId: z.string().nullable().optional(),
 });
 
@@ -108,6 +108,11 @@ export const scrapRouter = router({
             // contentとogpDataの初期化
             let contentWithoutLink = input.content || '';
             let ogpData = {};
+
+            // contentがnullの場合は空文字列として扱う
+            if (input.content === null) {
+                contentWithoutLink = '';
+            }
 
             // contentから最初のリンクを抽出
             const firstLink = extractFirstLink(contentWithoutLink);

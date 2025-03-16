@@ -3,6 +3,7 @@ import ScrapClient from './ScrapClient';
 import {trpcCaller} from "@/app/api/trpc/trpc-server";
 import {getServerSession} from "next-auth/next";
 import {nextAuthOptions} from "@/app/_utils/next-auth-options";
+import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
 
 export default async function ScrapBookPage({ params }: { params: { bookId: string } }) {
     const { bookId: bookId } = params;
@@ -11,7 +12,7 @@ export default async function ScrapBookPage({ params }: { params: { bookId: stri
         return caller.scrapBook.getScrapBookById({ id: bookId });
     });
 
-    const scraps = await trpcCaller(async (caller) => {
+    const scrapsData = await trpcCaller(async (caller) => {
         return caller.scrap.getScraps({ scrapBookId: bookId });
     });
 
@@ -20,10 +21,18 @@ export default async function ScrapBookPage({ params }: { params: { bookId: stri
 
     const isOwner = session?.userId === scrapBook.user.id;
 
-    if (!scraps) {
+    if (!scrapsData) {
         // エラーハンドリングまたは404ページを表示
         return notFound();
     }
+
+    // scrapsデータを適切な形式に変換
+    const scraps: ScrapWithTimeAgo[] = scrapsData.map(scrap => ({
+        ...scrap,
+        createdAt: scrap.createdAt instanceof Date ? scrap.createdAt.toISOString() : scrap.createdAt,
+        updatedAt: scrap.updatedAt instanceof Date ? scrap.updatedAt.toISOString() : scrap.updatedAt
+    }));
+
     return (
         <div className="flex flex-col min-h-[100dvh]">
             <main className="flex-1 bg-gray-100 dark:bg-gray-700 p-6">

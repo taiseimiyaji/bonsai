@@ -6,9 +6,9 @@
 type Branded<T, B> = T & { _brand: B };
 
 // 値オブジェクト用の型
-type RssFeedId = Branded<string, 'RssFeedId'>;
-type RssArticleId = Branded<string, 'RssArticleId'>;
-type RssUrl = Branded<string, 'RssUrl'>;
+export type RssFeedId = Branded<string, 'RssFeedId'>;
+export type RssArticleId = Branded<string, 'RssArticleId'>;
+export type RssUrl = Branded<string, 'RssUrl'>;
 
 // 結果型
 export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
