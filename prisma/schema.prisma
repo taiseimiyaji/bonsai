@@ -25,6 +25,13 @@ model User {
   Todo      Todo[]
   Scrap     Scrap[]
   ScrapBook ScrapBook[]
+  rssFeeds  RssFeed[]   @relation("UserRssFeeds")
+  role      UserRole    @default(USER)
+}
+
+enum UserRole {
+  USER
+  ADMIN
 }
 
 model Todo {
@@ -87,4 +94,61 @@ model ScrapCategory {
   id     String  @id @default(uuid())
   name   String  @unique
   scraps Scrap[]
+}
+
+// RSS関連のモデル
+model RssFeed {
+  id          String       @id @default(uuid())
+  url         String       @unique
+  title       String
+  description String?
+  feedType    RssFeedType  @default(PRIVATE)
+  userId      String?
+  user        User?        @relation("UserRssFeeds", fields: [userId], references: [id])
+  articles    RssArticle[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  lastFetched DateTime?
+
+  @@index([feedType])
+  @@index([userId])
+}
+
+enum RssFeedType {
+  PUBLIC  // 全体公開RSS（管理者が設定）
+  PRIVATE // 個人用RSS（ログインユーザーが設定）
+}
+
+model RssArticle {
+  id          String   @id @default(uuid())
+  feedId      String
+  feed        RssFeed  @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  title       String
+  link        String   @unique
+  description String?
+  content     String?
+  author      String?
+  publishedAt DateTime
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([feedId])
+  @@index([publishedAt])
+}
+
+// 定期実行ジョブのログ
+model CronExecutionLog {
+  id                   String   @id @default(uuid())
+  jobName              String   // ジョブ名（例: update-feeds）
+  startTime            DateTime // 開始時刻
+  endTime              DateTime // 終了時刻
+  executionTimeSeconds Float    // 実行時間（秒）
+  status               String   // ステータス（SUCCESS, ERROR）
+  details              String?  // 詳細情報
+  createdAt            DateTime @default(now())
+
+  @@index([jobName])
+  @@index([startTime])
+  @@index([status])
 }
