@@ -168,7 +168,9 @@ export const rssRouter = router({
   // 特定のフィードの記事を取得
   getFeedArticles: publicProcedure
     .input(z.object({ 
-      feedId: z.string().min(1) 
+      feedId: z.string().min(1),
+      page: z.number().min(1).default(1),
+      pageSize: z.number().min(1).max(100).default(10)
     }))
     .query(async ({ input }) => {
       const result = await rssService.getFeedArticles(input.feedId);
@@ -188,14 +190,23 @@ export const rssRouter = router({
       
       // 記事にフィード情報を追加
       const articles = result.value;
-      const articlesWithFeed = articles.map(article => {
+      
+      // ページネーション処理
+      const startIndex = (input.page - 1) * input.pageSize;
+      const endIndex = startIndex + input.pageSize;
+      const paginatedArticles = articles.slice(startIndex, endIndex);
+      
+      const articlesWithFeed = paginatedArticles.map(article => {
         return {
           ...formatArticle(article),
           feed: feed ? { title: feed.title, id: feed.id } : undefined
         };
       });
       
-      return articlesWithFeed;
+      return {
+        articles: articlesWithFeed,
+        totalCount: articles.length
+      };
     }),
 
   // 公開フィードの一覧を取得

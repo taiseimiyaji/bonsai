@@ -85,17 +85,49 @@ export default function ScrapClient(
 
         const previousData = utils.scrap.getScraps.getData({ scrapBookId: bookId });
 
-        utils.scrap.getScraps.setData({ scrapBookId: bookId }, (oldData) => [
-            ...(oldData || []),
-            {
-                ...newScrapData,
-                id: 'temp-id', // 一時的なID
-                timeAgo: 'just now',
-            },
-        ]);
+        // 型を明示的に指定して、期待される型と一致させる
+        utils.scrap.getScraps.setData({ scrapBookId: bookId }, (oldData) => {
+            if (!oldData) return [
+                {
+                    ...newScrapData,
+                    id: 'temp-id', // 一時的なID
+                    timeAgo: 'just now',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    user: {
+                        id: 'temp-user-id',
+                        name: 'You',
+                        image: '/user.svg'
+                    }
+                }
+            ];
+            
+            return [
+                ...oldData,
+                {
+                    ...newScrapData,
+                    id: 'temp-id', // 一時的なID
+                    timeAgo: 'just now',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    user: {
+                        id: 'temp-user-id',
+                        name: 'You',
+                        image: '/user.svg'
+                    }
+                }
+            ];
+        });
 
         try {
-            await addScrapMutation.mutateAsync({ scrapBookId: bookId, ...newScrapData });
+            // contentがnullの場合は空文字列として渡す
+            const contentToSend = newScrapData.content === null ? '' : newScrapData.content;
+            const { scrapBookId, ...restData } = newScrapData;
+            await addScrapMutation.mutateAsync({ 
+                scrapBookId: bookId, 
+                ...restData,
+                content: contentToSend
+            });
             // onSuccessで再フェッチが行われます
         } catch (err) {
             // エラー時にロールバック

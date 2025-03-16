@@ -1,18 +1,25 @@
-// app/api/trpc/route.ts
+// app/api/trpc/[trpc]/route.ts
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { NextRequest } from 'next/server';
-import {appRouter} from "@/app/api/trpc/routers/_app";
-import {createTRPCContext} from "@/app/api/trpc/init"; // NextRequestを使う
+import { appRouter } from "@/app/api/trpc/routers/_app";
+import { createTRPCContext } from "@/app/api/trpc/init";
 
 export const runtime = 'nodejs';
 
-export const handler = (req: NextRequest) => {
+export async function GET(req: NextRequest) {
     return fetchRequestHandler({
         endpoint: '/api/trpc',
-        req, // reqはNextRequestとして扱う
+        req,
         router: appRouter,
         createContext: createTRPCContext,
     });
-};
+}
 
-export { handler as GET, handler as POST };
+export async function POST(req: NextRequest) {
+    return fetchRequestHandler({
+        endpoint: '/api/trpc',
+        req,
+        router: appRouter,
+        createContext: createTRPCContext,
+    });
+}

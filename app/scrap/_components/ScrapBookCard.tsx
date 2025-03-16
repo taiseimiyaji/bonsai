@@ -51,10 +51,10 @@ const ScrapBookCard: React.FC<ScrapBookCardProps> =
             <div className="flex items-center gap-2 mb-2">
                 <img
                     src={user.image || "/user.svg"}
-                    alt={user.name}
+                    alt={user.name || "ユーザー"}
                     className="w-8 h-8 object-cover rounded-full"
                 />
-                <span className="text-gray-500 dark:text-gray-400">{user.name}</span>
+                <span className="text-gray-500 dark:text-gray-400">{user.name || "匿名ユーザー"}</span>
             </div>
             <p className="text-gray-500 dark:text-gray-400 text-sm">Created: {new Date(createdAt).toLocaleDateString()}</p>
             <p className="text-gray-500 dark:text-gray-400 text-sm">Updated: {new Date(updatedAt).toLocaleDateString()}</p>

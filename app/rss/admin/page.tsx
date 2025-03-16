@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { prisma } from '@/prisma/prisma';
 import AddPublicFeedForm from './_components/AddPublicFeedForm';
 import AdminFeedList from './_components/AdminFeedList';
+import AdminActions from './_components/AdminActions';
 import { serverClient } from '@/app/api/trpc/trpc-server';
 
 export default async function AdminPage() {
@@ -90,72 +91,6 @@ export default async function AdminPage() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// 管理者アクションコンポーネント
-function AdminActions() {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-medium mb-2">全フィードを更新</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          すべてのRSSフィードを手動で更新します。
-        </p>
-        <UpdateAllFeedsButton />
-      </div>
-    </div>
-  );
-}
-
-// 全フィード更新ボタン
-'use client';
-import { useState } from 'react';
-import { trpc } from '@/app/api/trpc/trpc-client';
-
-function UpdateAllFeedsButton() {
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
-  
-  const updateAllMutation = trpc.rss.updateAllFeeds.useMutation({
-    onSuccess: (data) => {
-      setResult({
-        success: true,
-        message: `${data.newArticlesCount}件の新しい記事を取得しました`
-      });
-      setIsUpdating(false);
-    },
-    onError: (error) => {
-      setResult({
-        success: false,
-        message: `エラーが発生しました: ${error.message}`
-      });
-      setIsUpdating(false);
-    }
-  });
-  
-  const handleUpdate = () => {
-    setIsUpdating(true);
-    setResult(null);
-    updateAllMutation.mutate();
-  };
-  
-  return (
-    <div>
-      <button
-        onClick={handleUpdate}
-        disabled={isUpdating}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {isUpdating ? '更新中...' : '全フィードを更新'}
-      </button>
-      
-      {result && (
-        <div className={`mt-2 text-sm ${result.success ? 'text-green-600' : 'text-red-600'}`}>
-          {result.message}
-        </div>
-      )}
     </div>
   );
 }
