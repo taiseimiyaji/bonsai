@@ -146,4 +146,60 @@ export class RssFeedService {
 
     return { ok: true, value: updatedCount };
   }
+
+  /**
+   * フィードから記事を取得して保存する
+   * @param feed 対象のRSSフィード
+   * @returns 保存された記事の配列
+   */
+  async fetchAndSaveArticles(feed: RssFeed): Promise<Result<RssArticle[], DomainError>> {
+    try {
+      // フィードから記事を取得
+      const articlesResult = await this.fetchAndParseFeed(feed);
+      if (!articlesResult.ok) {
+        return { ok: false, error: articlesResult.error };
+      }
+
+      const articles = articlesResult.value;
+      if (articles.length === 0) {
+        // 記事がない場合は最終更新日時だけ更新
+        await this.feedRepository.updateLastFetched(feed.id, new Date());
+        return { ok: true, value: [] };
+      }
+
+      // 新しい記事のみをフィルタリング
+      const newArticles: RssArticle[] = [];
+      for (const article of articles) {
+        const existingArticle = await this.articleRepository.findByLink(article.link);
+        if (!existingArticle.ok) {
+          return { ok: false, error: existingArticle.error };
+        }
+        
+        if (!existingArticle.value) {
+          newArticles.push(article);
+        }
+      }
+
+      // 新しい記事を保存
+      let savedArticles: RssArticle[] = [];
+      if (newArticles.length > 0) {
+        const savedResult = await this.articleRepository.saveMany(newArticles);
+        if (!savedResult.ok) {
+          return { ok: false, error: savedResult.error };
+        }
+        savedArticles = savedResult.value;
+      }
+
+      // 最終更新日時を更新
+      await this.feedRepository.updateLastFetched(feed.id, new Date());
+
+      return { ok: true, value: savedArticles };
+    } catch (error) {
+      console.error(`フィード「${feed.title}」の更新中にエラーが発生しました:`, error);
+      return { 
+        ok: false, 
+        error: new DomainError(`フィードの更新に失敗しました: ${(error as Error).message}`) 
+      };
+    }
+  }
 }

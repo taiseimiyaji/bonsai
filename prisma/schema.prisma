@@ -136,3 +136,19 @@ model RssArticle {
   @@index([feedId])
   @@index([publishedAt])
 }
+
+// 定期実行ジョブのログ
+model CronExecutionLog {
+  id                   String   @id @default(uuid())
+  jobName              String   // ジョブ名（例: update-feeds）
+  startTime            DateTime // 開始時刻
+  endTime              DateTime // 終了時刻
+  executionTimeSeconds Float    // 実行時間（秒）
+  status               String   // ステータス（SUCCESS, ERROR）
+  details              String?  // 詳細情報
+  createdAt            DateTime @default(now())
+
+  @@index([jobName])
+  @@index([startTime])
+  @@index([status])
+}

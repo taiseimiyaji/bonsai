@@ -142,7 +142,54 @@ export class RssApplicationService {
 
   // すべてのフィードを更新する
   async updateAllFeeds(): Promise<Result<number, DomainError | ApplicationError>> {
-    return this.feedService.updateAllFeeds();
+    try {
+      // すべてのフィードを取得
+      const feedsResult = await this.feedRepository.findAll();
+      if (!feedsResult.ok) {
+        return { ok: false, error: feedsResult.error };
+      }
+      
+      const feeds = feedsResult.value;
+      console.log(`全${feeds.length}件のフィードを更新します`);
+      
+      let updatedCount = 0;
+      const errors: { feedId: string; error: string }[] = [];
+      
+      // 各フィードを順番に更新
+      for (const feed of feeds) {
+        try {
+          console.log(`フィード更新中: ${feed.title} (${feed.id})`);
+          const updateResult = await this.feedService.fetchAndSaveArticles(feed);
+          
+          if (updateResult.ok) {
+            updatedCount++;
+            console.log(`フィード更新成功: ${feed.title} - 記事数: ${updateResult.value.length}`);
+          } else {
+            console.error(`フィード更新エラー: ${feed.title} - ${updateResult.error.message}`);
+            errors.push({ feedId: feed.id, error: updateResult.error.message });
+          }
+        } catch (error) {
+          console.error(`予期しないエラー: ${feed.title} - ${(error as Error).message}`);
+          errors.push({ feedId: feed.id, error: (error as Error).message });
+        }
+        
+        // レート制限を避けるための短い待機
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      // エラーがあった場合はログに記録
+      if (errors.length > 0) {
+        console.warn(`${errors.length}件のフィードで更新エラーが発生しました`);
+        console.warn(JSON.stringify(errors, null, 2));
+      }
+      
+      return { ok: true, value: updatedCount };
+    } catch (error) {
+      return { 
+        ok: false, 
+        error: new ApplicationError(`すべてのフィード更新中にエラーが発生しました: ${(error as Error).message}`) 
+      };
+    }
   }
 
   // 公開フィードを取得する
