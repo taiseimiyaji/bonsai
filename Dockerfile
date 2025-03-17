@@ -34,7 +34,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 RUN npm install --production
 ENV NODE_ENV=production
 EXPOSE 8080
-COPY prisma/ ./prisma/
+COPY prisma /app/prisma
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 CMD ["/app/entrypoint.sh"]
