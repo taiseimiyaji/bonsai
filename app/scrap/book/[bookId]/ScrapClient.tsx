@@ -63,7 +63,7 @@ export default function ScrapClient(
         return () => {
             window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [handleToggleForm]);
+    }, [handleToggleForm, showForm]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -77,7 +77,7 @@ export default function ScrapClient(
         return () => {
             window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [handleToggleForm]);
+    }, [handleToggleForm, showForm]);
 
     const handleScrapAdded = async (newScrapData: Omit<ScrapWithTimeAgo, 'id' | 'timeAgo' | "createdAt" | "updatedAt" | "user">) => {
         // **楽観的更新**

@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { BookOpenIcon } from "@heroicons/react/solid";
+import Image from "next/image";
 
 interface ScrapBookCardProps {
     id: string;
@@ -30,12 +31,13 @@ const ScrapBookCard: React.FC<ScrapBookCardProps> =
         <Link href={`/scrap/book/${id}`} className="block bg-white dark:bg-gray-900 rounded-lg shadow-md hover:shadow-lg transition-transform transform hover:-translate-y-1 hover:scale-105 p-6 relative">
             <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-t-lg overflow-hidden flex items-center justify-center">
                 {image && image.trim() !== "" ? (
-                    <img
+                    <Image
                         alt={title}
                         className="w-full h-full object-cover"
                         src={image}
+                        width={400}
+                        height={225}
                         style={{
-                            aspectRatio: "400/225",
                             objectFit: "cover",
                         }}
                     />
@@ -49,10 +51,12 @@ const ScrapBookCard: React.FC<ScrapBookCardProps> =
             <h2 className="text-2xl font-bold mb-4 mt-4">{title}</h2>
             {description && <p className="text-gray-500 dark:text-gray-400 mb-4">{description}</p>}
             <div className="flex items-center gap-2 mb-2">
-                <img
+                <Image
                     src={user.image || "/user.svg"}
                     alt={user.name || "ユーザー"}
                     className="w-8 h-8 object-cover rounded-full"
+                    width={32}
+                    height={32}
                 />
                 <span className="text-gray-500 dark:text-gray-400">{user.name || "匿名ユーザー"}</span>
             </div>
