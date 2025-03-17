@@ -43,7 +43,7 @@ const ScrapCard: React.FC<ScrapCardProps> = ({
 			</div>
 			<div className="p-6">
 				<div className="flex justify-between items-center mb-2">
-					<Badge text={category} />
+					<Badge>{category}</Badge>
 					<span className="text-gray-500 dark:text-gray-400 text-sm">
 						{timeAgo}
 					</span>
