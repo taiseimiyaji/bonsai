@@ -2,6 +2,7 @@ import React from "react";
 import UserIcon from "@/app/scrap/_components/UserIcon";
 import Link from "next/link";
 import { ScrapWithTimeAgo } from "@/app/types/ScrapWithTimeAgo";
+import Image from "next/image";
 
 interface ScrapThreadProps {
     scraps: ScrapWithTimeAgo[];
@@ -19,10 +20,12 @@ export default function ScrapThread({ scraps }: ScrapThreadProps) {
                         <div className="flex items-center gap-4">
                             <div className="flex-shrink-0 rounded-full bg-gray-200 dark:bg-gray-800 w-10 h-10 flex items-center justify-center">
                                 {scrap?.user?.image ? (
-                                    <img
+                                    <Image
                                         src={scrap.user.image}
                                         alt={scrap.user.name}
                                         className="w-full h-full object-cover rounded-full"
+                                        width={40}
+                                        height={40}
                                     />
                                 ) : (
                                     <UserIcon className="w-6 h-6 text-gray-500 dark:text-gray-400" />
@@ -47,10 +50,12 @@ export default function ScrapThread({ scraps }: ScrapThreadProps) {
                                 {/* OGP画像がある場合は画像を表示 */}
                                 {scrap.ogpData.image && scrap.ogpData.image.trim() !== "" && (
                                     <div className="flex-shrink-0 w-full max-w-sm bg-gray-200 dark:bg-gray-800 rounded-md overflow-hidden">
-                                        <img
+                                        <Image
                                             src={scrap.ogpData.image}
                                             alt={`${scrap.ogpData.title} OGP`}
                                             className="w-full h-auto object-cover"
+                                            width={300}
+                                            height={200}
                                         />
                                     </div>
                                 )}
