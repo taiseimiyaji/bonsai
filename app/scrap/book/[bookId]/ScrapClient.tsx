@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import ScrapThread from '@/app/scrap/_components/ScrapThread';
 import ScrapForm from '@/app/scrap/_components/ScrapForm';
 import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
@@ -37,9 +37,9 @@ export default function ScrapClient(
         },
     });
 
-    const handleToggleForm = () => {
+    const handleToggleForm = useCallback(() => {
         setShowForm((prevShowForm) => !prevShowForm);
-    };
+    }, []);
 
     useEffect(() => {
         if (showForm) {
