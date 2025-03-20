@@ -27,7 +27,7 @@ WORKDIR /app
 
 # libssl1.1を直接インストール
 RUN apt-get update && \
-    apt-get install -y wget && \
+    apt-get install -y wget postgresql-client && \
     wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     dpkg -i libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
@@ -37,12 +37,13 @@ RUN apt-get update && \
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules ./node_modules
 
 # production用の依存関係をインストール
 RUN npm install --production
 
 ENV NODE_ENV=production
+# Cloud Runのデフォルトポート
 EXPOSE 8080
 
 # prismaフォルダは必ず /app 配下に配置（絶対パスで明示）
@@ -52,4 +53,12 @@ COPY prisma /app/prisma
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
+# マイグレーションログ用のディレクトリを作成
+RUN mkdir -p /app/logs
+
+# 環境変数の設定確認用スクリプト
+COPY check-env.sh /app/check-env.sh
+RUN chmod +x /app/check-env.sh
+
+# Cloud Runでの実行時に環境変数が設定されていることを確認
 CMD ["/app/entrypoint.sh"]
