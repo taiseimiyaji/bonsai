@@ -18,9 +18,9 @@ COPY public ./public
 COPY app ./app
 COPY next.config.js ./
 COPY tsconfig.json ./
-COPY next-env.d.ts ./
 COPY tailwind.config.ts ./
 COPY postcss.config.js ./
+COPY types ./types
 
 # BuildKitの秘密マウントでシークレットをファイルとしてマウント
 RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
