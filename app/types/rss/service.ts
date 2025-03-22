@@ -26,45 +26,64 @@ export class RssFeedService {
   // RSSフィードを取得して解析する
   async fetchAndParseFeed(feed: RssFeed): Promise<Result<RssArticle[], RssFetchError>> {
     try {
-      // フィードを取得
-      const parsedFeed = await this.parser.parseURL(feed.url as string);
-      
-      if (!parsedFeed.items || parsedFeed.items.length === 0) {
-        return { ok: true, value: [] };
+      // URLの検証
+      if (!feed.url) {
+        return { 
+          ok: false, 
+          error: new RssFetchError('フィードURLが指定されていません') 
+        };
       }
-
-      // 記事を作成
-      const articles: RssArticle[] = parsedFeed.items.map(item => {
-        // 日付の処理
-        const publishedDate = item.pubDate || item.isoDate 
-          ? new Date(item.pubDate || item.isoDate || '') 
-          : new Date();
-
-        // メディア画像の取得
-        let imageUrl = null;
-        if (item.media && item.media.$ && item.media.$.url) {
-          imageUrl = item.media.$.url;
-        } else if (item.enclosure && item.enclosure.url) {
-          imageUrl = item.enclosure.url;
+      
+      // URLをトリムして余分な空白を削除
+      const url = (feed.url as string).trim();
+      
+      try {
+        // フィードを取得
+        const parsedFeed = await this.parser.parseURL(url);
+        
+        if (!parsedFeed.items || parsedFeed.items.length === 0) {
+          return { ok: true, value: [] };
         }
 
-        // コンテンツの取得
-        const content = item.contentEncoded || item.content || item['content:encoded'] || null;
+        // 記事を作成
+        const articles: RssArticle[] = parsedFeed.items.map(item => {
+          // 日付の処理
+          const publishedDate = item.pubDate || item.isoDate 
+            ? new Date(item.pubDate || item.isoDate || '') 
+            : new Date();
 
-        return createRssArticle(
-          '', // IDはリポジトリで生成
-          feed.id,
-          item.title || '無題',
-          item.link || '',
-          publishedDate,
-          item.description || null,
-          content,
-          item.creator || item.author || null,
-          imageUrl
-        );
-      });
+          // メディア画像の取得
+          let imageUrl = null;
+          if (item.media && item.media.$ && item.media.$.url) {
+            imageUrl = item.media.$.url;
+          } else if (item.enclosure && item.enclosure.url) {
+            imageUrl = item.enclosure.url;
+          }
 
-      return { ok: true, value: articles };
+          // コンテンツの取得
+          const content = item.contentEncoded || item.content || item['content:encoded'] || null;
+
+          return createRssArticle(
+            '', // IDはリポジトリで生成
+            feed.id,
+            item.title || '無題',
+            item.link || '',
+            publishedDate,
+            item.description || null,
+            content,
+            item.creator || item.author || null,
+            imageUrl
+          );
+        });
+
+        return { ok: true, value: articles };
+      } catch (parseError) {
+        console.error(`フィード「${feed.title}」の解析エラー:`, parseError);
+        return { 
+          ok: false, 
+          error: new RssFetchError(`RSSフィードの解析に失敗しました: ${(parseError as Error).message}`) 
+        };
+      }
     } catch (error) {
       console.error('RSSフィードの取得・解析に失敗しました:', error);
       return { 
