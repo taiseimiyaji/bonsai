@@ -37,6 +37,9 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
+# ダミーの DATABASE_URL をリセット
+ENV DATABASE_URL=
+
 # builder ステージから必要なファイルをコピー
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
@@ -46,11 +49,10 @@ COPY --from=builder /app/node_modules ./node_modules
 # production 用の依存関係を再インストール（※必要に応じて）
 RUN npm install --production
 
-# ランタイム環境の設定
 ENV NODE_ENV=production
 EXPOSE 8080
 
-# prisma フォルダを /app にコピー（絶対パスで明示）
+# prisma フォルダを /app にコピー
 COPY prisma /app/prisma
 
 # entrypoint.sh をコピーして実行権限を付与
