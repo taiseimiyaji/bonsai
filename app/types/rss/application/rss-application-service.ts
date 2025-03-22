@@ -60,38 +60,58 @@ export class RssApplicationService {
     try {
       // RSSフィードを取得して情報を抽出
       const parser = new (await import('rss-parser')).default();
-      const parsedFeed = await parser.parseURL(url);
-
-      // フィードを作成
-      const feed = createRssFeed(
-        '', // IDはリポジトリで生成
-        validUrl,
-        parsedFeed.title || 'Untitled Feed',
-        parsedFeed.description || null,
-        'PRIVATE', // ユーザーが追加する場合はPRIVATE
-        userId,
-        new Date()
-      );
-
-      // フィードを保存
-      const savedFeedResult = await this.feedRepository.save(feed);
-      if (!savedFeedResult.ok) {
-        return { ok: false, error: savedFeedResult.error };
+      
+      // URLが有効かどうか再確認
+      if (!url || typeof url !== 'string') {
+        return { 
+          ok: false, 
+          error: new ApplicationError('無効なURL形式です') 
+        };
       }
-      const savedFeed = savedFeedResult.value;
+      
+      // URLをトリムして余分な空白を削除
+      const trimmedUrl = url.trim();
+      
+      try {
+        const parsedFeed = await parser.parseURL(trimmedUrl);
+        
+        // フィードを作成
+        const feed = createRssFeed(
+          '', // IDはリポジトリで生成
+          validUrl,
+          parsedFeed.title || 'Untitled Feed',
+          parsedFeed.description || null,
+          'PRIVATE', // ユーザーが追加する場合はPRIVATE
+          userId,
+          new Date()
+        );
 
-      // 記事を取得して保存
-      const articlesResult = await this.feedService.fetchAndParseFeed(savedFeed);
-      if (!articlesResult.ok) {
-        // フィードは保存されているが、記事の取得に失敗した場合
+        // フィードを保存
+        const savedFeedResult = await this.feedRepository.save(feed);
+        if (!savedFeedResult.ok) {
+          return { ok: false, error: savedFeedResult.error };
+        }
+        const savedFeed = savedFeedResult.value;
+
+        // 記事を取得して保存
+        const articlesResult = await this.feedService.fetchAndParseFeed(savedFeed);
+        if (!articlesResult.ok) {
+          // フィードは保存されているが、記事の取得に失敗した場合
+          return { ok: true, value: savedFeed };
+        }
+
+        if (articlesResult.value.length > 0) {
+          await this.articleRepository.saveMany(articlesResult.value);
+        }
+
         return { ok: true, value: savedFeed };
+      } catch (parseError) {
+        console.error('RSSフィードの解析エラー:', parseError);
+        return { 
+          ok: false, 
+          error: new ApplicationError(`RSSフィードの取得・解析に失敗しました: ${(parseError as Error).message}`) 
+        };
       }
-
-      if (articlesResult.value.length > 0) {
-        await this.articleRepository.saveMany(articlesResult.value);
-      }
-
-      return { ok: true, value: savedFeed };
     } catch (error) {
       console.error('フィード登録エラー:', error);
       return { 
@@ -126,38 +146,58 @@ export class RssApplicationService {
     try {
       // RSSフィードを取得して情報を抽出
       const parser = new (await import('rss-parser')).default();
-      const parsedFeed = await parser.parseURL(url);
-
-      // フィードを作成
-      const feed = createRssFeed(
-        '', // IDはリポジトリで生成
-        validUrl,
-        parsedFeed.title || 'Untitled Feed',
-        parsedFeed.description || null,
-        'PUBLIC', // 管理者が追加する場合はPUBLIC
-        null, // 公開フィードはユーザーIDなし
-        new Date()
-      );
-
-      // フィードを保存
-      const savedFeedResult = await this.feedRepository.save(feed);
-      if (!savedFeedResult.ok) {
-        return { ok: false, error: savedFeedResult.error };
+      
+      // URLが有効かどうか再確認
+      if (!url || typeof url !== 'string') {
+        return { 
+          ok: false, 
+          error: new ApplicationError('無効なURL形式です') 
+        };
       }
-      const savedFeed = savedFeedResult.value;
+      
+      // URLをトリムして余分な空白を削除
+      const trimmedUrl = url.trim();
+      
+      try {
+        const parsedFeed = await parser.parseURL(trimmedUrl);
+        
+        // フィードを作成
+        const feed = createRssFeed(
+          '', // IDはリポジトリで生成
+          validUrl,
+          parsedFeed.title || 'Untitled Feed',
+          parsedFeed.description || null,
+          'PUBLIC', // 管理者が追加する場合はPUBLIC
+          null, // 公開フィードはユーザーIDなし
+          new Date()
+        );
 
-      // 記事を取得して保存
-      const articlesResult = await this.feedService.fetchAndParseFeed(savedFeed);
-      if (!articlesResult.ok) {
-        // フィードは保存されているが、記事の取得に失敗した場合
+        // フィードを保存
+        const savedFeedResult = await this.feedRepository.save(feed);
+        if (!savedFeedResult.ok) {
+          return { ok: false, error: savedFeedResult.error };
+        }
+        const savedFeed = savedFeedResult.value;
+
+        // 記事を取得して保存
+        const articlesResult = await this.feedService.fetchAndParseFeed(savedFeed);
+        if (!articlesResult.ok) {
+          // フィードは保存されているが、記事の取得に失敗した場合
+          return { ok: true, value: savedFeed };
+        }
+
+        if (articlesResult.value.length > 0) {
+          await this.articleRepository.saveMany(articlesResult.value);
+        }
+
         return { ok: true, value: savedFeed };
+      } catch (parseError) {
+        console.error('RSSフィードの解析エラー:', parseError);
+        return { 
+          ok: false, 
+          error: new ApplicationError(`RSSフィードの取得・解析に失敗しました: ${(parseError as Error).message}`) 
+        };
       }
-
-      if (articlesResult.value.length > 0) {
-        await this.articleRepository.saveMany(articlesResult.value);
-      }
-
-      return { ok: true, value: savedFeed };
     } catch (error) {
       console.error('フィード登録エラー:', error);
       return { 
