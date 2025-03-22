@@ -4,7 +4,7 @@ import React from "react";
 import ScrapBookCard from "./ScrapBookCard";
 
 // クライアントコンポーネントの型定義
-interface ScrapBook {
+export interface ScrapBook {
   id: string;
   title: string;
   description: string | null;
@@ -18,7 +18,7 @@ interface ScrapBook {
   updatedAt: string; 
 }
 
-interface ScrapBookClientPageProps {
+export interface ScrapBookClientPageProps {
   scrapBooks: ScrapBook[];
 }
 

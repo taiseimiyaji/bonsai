@@ -2,7 +2,24 @@ import { z } from 'zod';
 import { prisma } from '@/prisma/prisma';
 import { formatDistanceToNow } from 'date-fns';
 import { TRPCError } from '@trpc/server';
-import ogs from 'open-graph-scraper'; // OGPデータを取得するライブラリ
+
+// ビルド時にNode.jsモジュールの問題を回避するための条件付きインポート
+let ogs: any;
+if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+  // ビルド時にはダミーの実装を使用
+  ogs = async () => ({ 
+    result: { 
+      ogTitle: 'ビルド時のダミータイトル',
+      ogDescription: 'ビルド時のダミー説明',
+      ogImage: [{ url: '' }]
+    } 
+  });
+} else {
+  // 実行時には実際のパッケージを使用
+  import('open-graph-scraper').then(ogsModule => {
+    ogs = ogsModule.default;
+  });
+}
 
 import { publicProcedure, router } from "@/app/api/trpc/init";
 
@@ -19,6 +36,9 @@ const createScrapInput = z.object({
     content: z.string().min(1).nullable(),
     categoryId: z.string().nullable().optional(),
 });
+
+// ビルド時はモックデータを使用するためのフラグ
+const isBuildTime = process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build';
 
 export const scrapRouter = router({
     getScraps: publicProcedure
@@ -48,7 +68,7 @@ export const scrapRouter = router({
                     return {
                         ...scrap,
                         timeAgo: formatDistanceToNow(new Date(scrap.createdAt), { addSuffix: true }),
-                        ogpData: ogpDataValidation.success ? ogpDataValidation.data : null, // バリデーション成功時はデータ、失敗時はnull
+                        ogpData: ogpDataValidation.success ? ogpDataValidation.data : null, 
                         user: {
                             id: scrap.user.id,
                             name: scrap.user.name || '',
@@ -68,27 +88,38 @@ export const scrapRouter = router({
         .mutation(async ({ input, ctx }) => {
             const { session } = ctx;
 
-            // セッションがない場合、エラーを投げる
             if (!session || !session.user) {
                 throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized User' });
             }
 
             const userId = session.userId;
 
-            // contentから最初のリンクを抽出する関数
             function extractFirstLink(content: string): string | null {
-                const urlRegex = /(https?:\/\/[^\s]+)/;
-                const match = content.match(urlRegex);
-                return match ? match[0] : null;
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                const matches = content.match(urlRegex);
+                return matches ? matches[0] : null;
             }
 
-            // OGPデータを取得する関数
             async function fetchOgpData(url: string): Promise<{
                 title: string;
                 description: string;
                 image: string;
             }> {
+                if (isBuildTime) {
+                    return {
+                        title: 'ビルド時のダミータイトル',
+                        description: 'ビルド時のダミー説明',
+                        image: '',
+                    };
+                }
+                
                 try {
+                    // ogsがまだロードされていない場合の対応
+                    if (typeof ogs !== 'function') {
+                        const ogsImport = await import('open-graph-scraper');
+                        ogs = ogsImport.default;
+                    }
+                    
                     const { result } = await ogs({ url });
                     return {
                         title: result.ogTitle || '',
@@ -105,33 +136,24 @@ export const scrapRouter = router({
                 }
             }
 
-            // contentとogpDataの初期化
             let contentWithoutLink = input.content || '';
             let ogpData = {};
 
-            // contentがnullの場合は空文字列として扱う
-            if (input.content === null) {
-                contentWithoutLink = '';
+            if (input.content) {
+                const link = extractFirstLink(input.content);
+                if (link) {
+                    contentWithoutLink = input.content.replace(link, '').trim();
+                    
+                    const ogpResult = await fetchOgpData(link);
+                    ogpData = {
+                        link,
+                        title: ogpResult.title,
+                        description: ogpResult.description,
+                        image: ogpResult.image,
+                    };
+                }
             }
 
-            // contentから最初のリンクを抽出
-            const firstLink = extractFirstLink(contentWithoutLink);
-
-            if (firstLink) {
-                // 抽出したリンクのOGPデータを取得
-                const fetchedOgpData = await fetchOgpData(firstLink);
-
-                // OGPデータを設定し、リンクをogpDataに保存
-                ogpData = {
-                    link: firstLink,
-                    ...fetchedOgpData,
-                };
-
-                // contentからリンクを削除
-                contentWithoutLink = contentWithoutLink.replace(firstLink, '').trim();
-            }
-
-            // Prismaに渡すデータを準備
             const data: any = {
                 scrapBook: { connect: { id: input.scrapBookId } },
                 content: contentWithoutLink,
