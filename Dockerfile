@@ -32,8 +32,8 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ビルド時のダミー値をリセット（ランタイムでは Cloud Run の環境変数で上書きされる）
-RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
-    sh -c 'if [ -z "$DATABASE_URL" ]; then echo "DATABASE_URL is empty"; exit 1; fi && \
+RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
+    sh -c 'DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
            echo "DATABASE_URL length: ${#DATABASE_URL}" && \
            cp prisma/schema.build.prisma prisma/schema.prisma && \
            npm ci && \
