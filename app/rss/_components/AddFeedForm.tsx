@@ -4,7 +4,7 @@
 'use client';
 
 import { useState } from 'react';
-import { trpc } from '@/app/api/trpc/trpc-client';
+import { trpc } from '@/app/lib/trpc-client';
 
 export default function AddFeedForm() {
   const [url, setUrl] = useState('');
