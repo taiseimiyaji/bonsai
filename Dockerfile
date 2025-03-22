@@ -14,7 +14,7 @@ RUN apt-get update && \
 # ビルド時には BuildKit の秘密マウント機能でシークレットを利用する
 RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
     sh -c 'if [ -z "$DATABASE_URL" ]; then echo "DATABASE_URL is empty"; exit 1; fi && \
-           echo "Using build-time DATABASE_URL: $DATABASE_URL" && \
+           echo "DATABASE_URL length: ${#DATABASE_URL}" && \
            cp prisma/schema.build.prisma prisma/schema.prisma && \
            npm ci && \
            npm run build'
@@ -32,7 +32,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ビルド時のダミー値をリセット（ランタイムでは Cloud Run の環境変数で上書きされる）
-ENV DATABASE_URL=
+RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
+    sh -c 'if [ -z "$DATABASE_URL" ]; then echo "DATABASE_URL is empty"; exit 1; fi && \
+           echo "DATABASE_URL length: ${#DATABASE_URL}" && \
+           cp prisma/schema.build.prisma prisma/schema.prisma && \
+           npm ci && \
+           npm run build'
 
 # Builder ステージから必要なファイルをコピー
 COPY --from=builder /app/.next ./.next
