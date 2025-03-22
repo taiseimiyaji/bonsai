@@ -14,7 +14,7 @@ const nextConfig = {
 		// 静的最適化を無効化
 		isrFlushToDisk: false,
 		// node:プロトコルをサポート
-		serverComponentsExternalPackages: ['pg', 'pg-native'],
+		serverComponentsExternalPackages: ['pg', 'pg-native', 'undici', 'open-graph-scraper'],
 	},
 	// 環境変数に基づいて設定を変更
 	env: {
@@ -43,8 +43,21 @@ const nextConfig = {
 				util: false,
 				assert: false,
 				process: false,
+				console: false,
 			};
 		}
+
+		// node:プロトコルを処理するための設定
+		config.resolve.alias = {
+			...config.resolve.alias,
+			'node:buffer': 'buffer',
+			'node:crypto': 'crypto-browserify',
+			'node:console': 'console-browserify',
+			'node:stream': 'stream-browserify',
+			'node:util': 'util',
+			'node:assert': 'assert',
+			'node:process': 'process/browser',
+		};
 
 		return config;
 	},
