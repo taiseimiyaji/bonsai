@@ -47,6 +47,11 @@ export function err<T, E>(error: E): Result<T, E> {
 // 値オブジェクト: RssUrl
 export function createRssUrl(url: string): Result<RssUrl, InvalidRssUrlError> {
   try {
+    // urlがnullまたはundefinedの場合はエラー
+    if (!url) {
+      return err(new InvalidRssUrlError('URLが指定されていません'));
+    }
+    
     // URLの形式チェック
     new URL(url);
     
@@ -57,6 +62,7 @@ export function createRssUrl(url: string): Result<RssUrl, InvalidRssUrlError> {
     
     return ok(url as RssUrl);
   } catch (error) {
+    console.error('RSSのURL検証エラー:', error);
     return err(new InvalidRssUrlError('URLの形式が正しくありません'));
   }
 }
