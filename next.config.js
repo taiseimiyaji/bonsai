@@ -7,10 +7,12 @@ const nextConfig = {
 			"storage.googleapis.com"
 		],
 	},
-	// ビルド時にデータベースアクセスを回避するための設定
+	// すべてのページをSSR前提にする設定
+	output: 'standalone',
+	// 静的最適化を無効化
 	experimental: {
-		// ビルド時にはすべてのルートを静的に生成しない
-		isrMemoryCacheSize: 0,
+		// 静的最適化を無効化
+		isrFlushToDisk: false,
 	},
 	// 環境変数に基づいて設定を変更
 	env: {
@@ -22,9 +24,6 @@ const nextConfig = {
 			? 'postgresql://dummy:dummy@localhost:5432/dummy?schema=dummy'
 			: process.env.DIRECT_URL,
 	},
-	// 動的なルートの設定
-	// ビルド時にはすべてのルートを静的に生成せず、ランタイム時に生成する
-	output: 'standalone',
 };
 
 module.exports = nextConfig;
