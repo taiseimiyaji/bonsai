@@ -3,7 +3,7 @@
 FROM node:22-slim AS builder
 WORKDIR /app
 
-# libssl1.1 をインストール
+# libssl1.1 のインストール
 RUN apt-get update && \
     apt-get install -y wget && \
     wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
@@ -11,19 +11,15 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
-# ビルド時用にダミーの DATABASE_URL を設定（最終イメージには残らない）
-ARG DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
-ENV DATABASE_URL=${DATABASE_URL}
-
-# package.json 等のコピーと依存関係のインストール
-COPY package*.json ./
-RUN npm ci
-
-# アプリケーション全体をコピー（.dockerignoreで不要なファイルが除外されている前提）
-COPY . .
-
-# ビルド（Prisma Client の生成と Next.js のビルド）
-RUN npm run build
+# ビルド時には BuildKit の秘密マウント機能で本番用 DATABASE_URL を一時的に利用する
+# シークレットは /run/secrets/DATABASE_URL にマウントされ、環境変数としても利用されます
+RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
+    export DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
+    echo "Using build-time DATABASE_URL: $DATABASE_URL" && \
+    # ここでビルド用の Prisma スキーマに差し替える場合（単一管理なら不要）
+    cp prisma/schema.build.prisma prisma/schema.prisma && \
+    npm ci && \
+    npm run build
 
 # ────────────────────────────── Runner ステージ ──────────────────────────────
 FROM node:22-slim AS runner
@@ -37,22 +33,22 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
-# ダミーの DATABASE_URL をリセット
+# ビルド時のダミー値をリセット（ランタイムでは Cloud Run の環境変数で上書きされる）
 ENV DATABASE_URL=
 
-# builder ステージから必要なファイルをコピー
+# Builder ステージから必要なファイルをコピー
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
-# production 用の依存関係を再インストール（※必要に応じて）
+# production 用の依存関係を再インストール（必要に応じて）
 RUN npm install --production
 
 ENV NODE_ENV=production
 EXPOSE 8080
 
-# prisma フォルダを /app にコピー
+# prisma フォルダのコピー
 COPY prisma /app/prisma
 
 # entrypoint.sh をコピーして実行権限を付与
