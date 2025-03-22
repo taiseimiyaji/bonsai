@@ -3,7 +3,7 @@
  */
 'use client';
 
-import { trpc } from '@/app/api/trpc/trpc-client';
+import { trpc } from '@/app/lib/trpc-client';
 
 interface FeedListProps {
   isLoggedIn: boolean;
