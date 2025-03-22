@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { publicProcedure } from "@/app/api/trpc/init";
 import { authenticatedProcedure, adminProcedure } from './middleware';
-import { formatFeed } from './utils';
+import { formatFeed, formatArticle } from './utils';
 import { RssApplicationService } from '@/app/types/rss/application/rss-application-service';
 import { PrismaRssFeedRepository, PrismaRssArticleRepository } from '@/app/types/rss/infrastructure/prisma-repository';
 import './types'; // 型定義をインポート
@@ -130,4 +130,68 @@ export const getPublicFeeds = publicProcedure
     }
     
     return result.value.map(formatFeed);
+  });
+
+/**
+ * すべてのフィードを更新（管理者専用）
+ */
+export const updateAllFeeds = adminProcedure
+  .mutation(async () => {
+    const result = await rssService.updateAllFeeds();
+    
+    if (!result.ok) {
+      throw new TRPCError({ 
+        code: 'INTERNAL_SERVER_ERROR', 
+        message: result.error.message 
+      });
+    }
+    
+    return { 
+      success: true, 
+      updatedCount: result.value 
+    };
+  });
+
+/**
+ * 特定のフィードを更新
+ */
+export const updateFeed = authenticatedProcedure
+  .input(z.object({
+    feedId: z.string().min(1)
+  }))
+  .mutation(async ({ ctx, input }) => {
+    // フィードの所有者を確認
+    const { prisma } = await import('@/prisma/prisma');
+    const feed = await prisma.rssFeed.findUnique({
+      where: { id: input.feedId }
+    });
+    
+    if (!feed) {
+      throw new TRPCError({ 
+        code: 'NOT_FOUND', 
+        message: 'フィードが見つかりません' 
+      });
+    }
+    
+    // 管理者以外は自分のフィードしか更新できない
+    if (feed.userId !== ctx.userId && !ctx.isAdmin) {
+      throw new TRPCError({ 
+        code: 'FORBIDDEN', 
+        message: 'このフィードを更新する権限がありません' 
+      });
+    }
+    
+    const result = await rssService.updateFeed(input.feedId);
+    
+    if (!result.ok) {
+      throw new TRPCError({ 
+        code: 'INTERNAL_SERVER_ERROR', 
+        message: result.error.message 
+      });
+    }
+    
+    return { 
+      success: true, 
+      articles: result.value.map(formatArticle)
+    };
   });

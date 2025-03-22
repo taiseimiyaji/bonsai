@@ -33,8 +33,8 @@ export default function FeedArticleList({ feedId }: FeedArticleListProps) {
     );
   }
   
-  const { articles, totalCount } = articlesQuery.data || { articles: [], totalCount: 0 };
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const { articles, pagination } = articlesQuery.data || { articles: [], pagination: { totalItems: 0, page: 1, pageSize, totalPages: 1 } };
+  const totalPages = pagination.totalPages;
   
   if (articles.length === 0) {
     return (

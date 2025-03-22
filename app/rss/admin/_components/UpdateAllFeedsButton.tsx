@@ -11,7 +11,7 @@ export default function UpdateAllFeedsButton() {
     onSuccess: (data) => {
       setResult({
         success: true,
-        message: `${data.newArticlesCount}件の新しい記事を取得しました`
+        message: `${data.updatedCount}件のフィードを更新しました`
       });
       setIsUpdating(false);
     },
