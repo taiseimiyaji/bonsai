@@ -27,8 +27,11 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=dummy"
 ENV DIRECT_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=dummy"
 ENV NODE_ENV="production"
 
-# ビルド実行
-RUN npm ci && \
+# ビルド前にtrpc-clientファイルの存在確認
+RUN ls -la /app/app/api/trpc/
+
+# devDependenciesを含めて全ての依存関係をインストール
+RUN npm ci --include=dev && \
     npx prisma generate && \
     npm run build
 
@@ -58,6 +61,9 @@ EXPOSE 8080
 
 # prisma フォルダのコピー
 COPY prisma /app/prisma
+
+# app フォルダのコピー（ランタイムでも必要なファイルがある可能性があるため）
+COPY app /app/app
 
 # entrypoint.sh をコピーして実行権限を付与
 COPY entrypoint.sh /app/entrypoint.sh

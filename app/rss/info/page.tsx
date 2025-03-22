@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { trpc } from '@/app/lib/trpc-client';
+import { trpc } from '../../trpc-client';
 import ArticleList from './_components/ArticleList';
 import SourceFilter from './_components/SourceFilter';
 

@@ -3,7 +3,7 @@
  */
 'use client';
 
-import { trpc } from '@/app/lib/trpc-client';
+import { trpc } from '../../../trpc-client';
 
 export default function AdminFeedList() {
   // 公開フィードを取得
