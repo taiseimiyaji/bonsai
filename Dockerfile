@@ -15,7 +15,6 @@ RUN apt-get update && \
 RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
     sh -c 'DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
            echo "Using build-time DATABASE_URL with length: ${#DATABASE_URL}" && \
-           cp prisma/schema.build.prisma prisma/schema.prisma && \
            npm ci && \
            npm run build'
 
@@ -30,13 +29,6 @@ RUN apt-get update && \
     dpkg -i libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
-
-# ビルド時のダミー値をリセット（ランタイムでは Cloud Run の環境変数で上書きされる）
-RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
-    sh -c 'DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
-           echo "DATABASE_URL length: ${#DATABASE_URL}" && \
-           npm ci && \
-           npm run build'
 
 # Builder ステージから必要なファイルをコピー
 COPY --from=builder /app/.next ./.next
