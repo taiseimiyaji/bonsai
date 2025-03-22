@@ -12,7 +12,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ビルド時用にダミーの DATABASE_URL を設定（最終イメージには残らない）
-ARG DATABASE_URL=dummy://localhost
+ARG DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
 ENV DATABASE_URL=${DATABASE_URL}
 
 # package.json 等のコピーと依存関係のインストール
