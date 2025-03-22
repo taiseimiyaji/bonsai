@@ -18,7 +18,9 @@ import {
   addPublicFeed,
   deleteFeed,
   getUserFeeds,
-  getPublicFeeds
+  getPublicFeeds,
+  updateAllFeeds,
+  updateFeed
 } from './feeds';
 
 /**
@@ -38,4 +40,6 @@ export const rssRouter = router({
   deleteFeed,
   getUserFeeds,
   getPublicFeeds,
+  updateAllFeeds,
+  updateFeed,
 });
