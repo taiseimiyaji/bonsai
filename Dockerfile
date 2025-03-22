@@ -35,7 +35,6 @@ RUN apt-get update && \
 RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
     sh -c 'DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
            echo "DATABASE_URL length: ${#DATABASE_URL}" && \
-           cp prisma/schema.build.prisma prisma/schema.prisma && \
            npm ci && \
            npm run build'
 
