@@ -50,8 +50,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
-# production 用の依存関係を再インストール（必要に応じて）
-RUN npm install --production
+# production 用の依存関係を再インストールする必要はない
+# RUN npm install --production
 
 ENV NODE_ENV=production
 EXPOSE 8080
