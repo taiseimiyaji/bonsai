@@ -8,6 +8,17 @@ const isBuildTime = process.env.NODE_ENV === 'production' &&
 
 // モックデータ
 const mockData = {
+  User: [],
+  Todo: [],
+  Scrap: [],
+  ScrapBook: [],
+  ScrapCategory: [],
+  ScrapbookLink: [],
+  RssFeed: [],
+  RssArticle: [],
+  RssReadStatus: [],
+  CronExecutionLog: [],
+  // 互換性のために小文字バージョンも残す
   scrapBook: [],
   scrap: [],
   user: [],
@@ -19,10 +30,81 @@ const mockData = {
   rssArticle: [],
   rssReadStatus: [],
   cronExecutionLog: [],
+  todo: [],
 };
 
 // モックPrismaクライアント
 const mockPrismaClient = {
+  User: {
+    findMany: async () => Promise.resolve(mockData.User),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  Todo: {
+    findMany: async () => Promise.resolve(mockData.Todo),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  Scrap: {
+    findMany: async () => Promise.resolve(mockData.Scrap),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  ScrapBook: {
+    findMany: async () => Promise.resolve(mockData.ScrapBook),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  ScrapCategory: {
+    findMany: async () => Promise.resolve(mockData.ScrapCategory),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  ScrapbookLink: {
+    findMany: async () => Promise.resolve(mockData.ScrapbookLink),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  RssFeed: {
+    findMany: async () => Promise.resolve(mockData.RssFeed),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  RssArticle: {
+    findMany: async () => Promise.resolve(mockData.RssArticle),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+    createMany: async () => Promise.resolve({ count: 0 }),
+  },
+  RssReadStatus: {
+    findMany: async () => Promise.resolve(mockData.RssReadStatus),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+    upsert: async () => Promise.resolve({}),
+  },
+  CronExecutionLog: {
+    create: async () => Promise.resolve({}),
+    findMany: async () => Promise.resolve(mockData.CronExecutionLog),
+  },
+  // 互換性のために小文字バージョンも残す
   scrapBook: {
     findMany: async () => Promise.resolve(mockData.scrapBook),
     findUnique: async () => Promise.resolve(null),
@@ -72,7 +154,6 @@ const mockPrismaClient = {
     update: async () => Promise.resolve({}),
     delete: async () => Promise.resolve({}),
   },
-  // RSSフィード関連のモックを追加
   rssFeed: {
     findMany: async () => Promise.resolve(mockData.rssFeed),
     findUnique: async () => Promise.resolve(null),
@@ -99,6 +180,13 @@ const mockPrismaClient = {
   cronExecutionLog: {
     create: async () => Promise.resolve({}),
     findMany: async () => Promise.resolve(mockData.cronExecutionLog),
+  },
+  todo: {
+    findMany: async () => Promise.resolve(mockData.todo),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
   },
   $connect: async () => Promise.resolve(),
   $disconnect: async () => Promise.resolve(),
