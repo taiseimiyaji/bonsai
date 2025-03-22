@@ -3,16 +3,16 @@ steps:
     args:
       - build
       - '-t'
-      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai:$SHORT_SHA'
+      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
       - '.'
 
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - run
       - deploy
-      - bonsai
+      - bonsai   # Cloud Run のサービス名
       - '--image'
-      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai:$SHORT_SHA'
+      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
       - '--region'
       - 'asia-northeast1'
       - '--platform'
@@ -22,4 +22,4 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 images:
-  - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai:$SHORT_SHA'
+  - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
