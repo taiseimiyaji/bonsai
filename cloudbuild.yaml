@@ -5,7 +5,7 @@ steps:
     args:
       - 'build'
       - '--secret'
-      - 'id=DATABASE_URL,src=/workspace/secrets/DATABASE_URL'
+      - 'id=DATABASE_URL,env=DATABASE_URL'
       - '-t'
       - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
       - '.'
@@ -34,7 +34,7 @@ options:
 availableSecrets:
   secretManager:
     - versionName: 'projects/bonsai-410001/secrets/DATABASE_URL/versions/latest'
-      # env フィールドを削除して、ファイルとしてのみ利用する
+      env: 'DATABASE_URL'
 
 images:
   - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
