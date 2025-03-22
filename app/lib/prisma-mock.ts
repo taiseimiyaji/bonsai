@@ -1,4 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+/**
+ * ビルド時にデータベースアクセスを回避するためのモックプロバイダー
+ */
 
 // 環境変数がビルド時かどうかを判定
 const isBuildTime = process.env.NODE_ENV === 'production' && 
@@ -72,22 +74,29 @@ const mockPrismaClient = {
   $disconnect: async () => Promise.resolve(),
 };
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+// 実際のPrismaクライアントをインポート
+import { PrismaClient } from '@prisma/client';
 
 // ビルド時かどうかに応じて、実際のクライアントかモッククライアントを返す
-export const prisma = globalForPrisma.prisma || 
-  (isBuildTime 
-    ? (mockPrismaClient as unknown as PrismaClient)
-    : new PrismaClient({
-        log: ['query', 'info', 'warn', 'error'],
-      })
-  );
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-
-// ビルド時にはログを出力
-if (isBuildTime) {
-  console.log('Using mock Prisma client for build time');
-} else {
+export function getPrismaClient() {
+  if (isBuildTime) {
+    console.log('Using mock Prisma client for build time');
+    return mockPrismaClient as unknown as PrismaClient;
+  }
+  
   console.log('Using real Prisma client');
+  return new PrismaClient();
 }
+
+// シングルトンインスタンス
+let prismaInstance: PrismaClient | null = null;
+
+// シングルトンパターンでPrismaクライアントを取得
+export function getPrisma() {
+  if (!prismaInstance) {
+    prismaInstance = getPrismaClient();
+  }
+  return prismaInstance;
+}
+
+export default getPrisma();
