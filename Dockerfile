@@ -11,10 +11,10 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
-# ビルド時には BuildKit の秘密マウント機能でシークレットを利用する
-RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
-    sh -c 'if [ -z "$DATABASE_URL" ]; then echo "DATABASE_URL is empty"; exit 1; fi && \
-           echo "DATABASE_URL length: ${#DATABASE_URL}" && \
+# BuildKitの秘密マウントでシークレットをファイルとしてマウント
+RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
+    sh -c 'DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
+           echo "Using build-time DATABASE_URL with length: ${#DATABASE_URL}" && \
            cp prisma/schema.build.prisma prisma/schema.prisma && \
            npm ci && \
            npm run build'
