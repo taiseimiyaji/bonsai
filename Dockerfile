@@ -1,8 +1,9 @@
-# Node.js の公式イメージ（Debianベース）を利用
+# syntax=docker/dockerfile:1.2
+# ────────────────────────────── Builder ステージ ──────────────────────────────
 FROM node:22-slim AS builder
 WORKDIR /app
 
-# libssl1.1を直接インストール
+# libssl1.1 をインストール
 RUN apt-get update && \
     apt-get install -y wget && \
     wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
@@ -10,22 +11,25 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
-# package.json等のコピーと依存関係のインストール
+# ビルド時用にダミーの DATABASE_URL を設定（最終イメージには残らない）
+ARG DATABASE_URL=dummy://localhost
+ENV DATABASE_URL=${DATABASE_URL}
+
+# package.json 等のコピーと依存関係のインストール
 COPY package*.json ./
 RUN npm ci
 
 # アプリケーション全体をコピー（.dockerignoreで不要なファイルが除外されている前提）
 COPY . .
 
-# ※ビルド時には prisma generate/migrate は実行しない
+# ビルド（Prisma Client の生成と Next.js のビルド）
 RUN npm run build
 
-#######################################
-# Runnerステージ：ランタイムイメージ
+# ────────────────────────────── Runner ステージ ──────────────────────────────
 FROM node:22-slim AS runner
 WORKDIR /app
 
-# libssl1.1を直接インストール
+# libssl1.1 と postgresql-client のインストール
 RUN apt-get update && \
     apt-get install -y wget postgresql-client && \
     wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
@@ -33,32 +37,32 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
-# 必要なファイルをbuilderステージからコピー
+# builder ステージから必要なファイルをコピー
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
-# production用の依存関係をインストール
+# production 用の依存関係を再インストール（※必要に応じて）
 RUN npm install --production
 
+# ランタイム環境の設定
 ENV NODE_ENV=production
-# Cloud Runのデフォルトポート
 EXPOSE 8080
 
-# prismaフォルダは必ず /app 配下に配置（絶対パスで明示）
+# prisma フォルダを /app にコピー（絶対パスで明示）
 COPY prisma /app/prisma
 
-# entrypoint.sh を /app にコピーして実行権限を付与
+# entrypoint.sh をコピーして実行権限を付与
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# マイグレーションログ用のディレクトリを作成
+# マイグレーションログ用ディレクトリの作成
 RUN mkdir -p /app/logs
 
-# 環境変数の設定確認用スクリプト
+# 環境変数確認用スクリプトのコピーと権限付与
 COPY check-env.sh /app/check-env.sh
 RUN chmod +x /app/check-env.sh
 
-# Cloud Runでの実行時に環境変数が設定されていることを確認
+# コンテナ起動時に entrypoint.sh を実行
 CMD ["/app/entrypoint.sh"]
