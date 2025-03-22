@@ -33,8 +33,8 @@ options:
 
 availableSecrets:
   secretManager:
-    - versionName: 'projects/123705768223/secrets/DATABASE_URL/versions/latest'
-      env: 'DATABASE_URL'
+    - versionName: 'projects/bonsai-410001/secrets/DATABASE_URL/versions/latest'
+      # env フィールドを削除して、ファイルとしてのみ利用する
 
 images:
   - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
