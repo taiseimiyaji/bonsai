@@ -4,7 +4,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SessionProvider } from 'next-auth/react';
-import { trpc } from '@/app/lib/trpc-client';
+import { trpc } from './trpc-client';
 import { httpBatchLink } from '@trpc/client';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

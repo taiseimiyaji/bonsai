@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { trpc } from '@/app/lib/trpc-client';
+import { trpc } from '../../trpc-client';
 import { FaLink, FaMarkdown, FaHeading, FaBookmark, FaTimes, FaCircle, FaFilter } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
