@@ -36,6 +36,10 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
+# sharpをインストール（画像最適化に必要）
+RUN apk add --no-cache vips-dev
+RUN npm install --no-save sharp
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -52,6 +56,9 @@ COPY --from=builder /app/public ./public
 # スタンドアロンビルドの場合は.next/standaloneを使用
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+
+# キャッシュディレクトリの権限を設定
+RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next/cache
 
 USER nextjs
 
