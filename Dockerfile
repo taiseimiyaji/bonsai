@@ -12,7 +12,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # ビルド時には BuildKit の秘密マウント機能でシークレットを利用する
-RUN --mount=type=secret,id=DATABASE_URL \
+RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
     export DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
     echo "Using build-time DATABASE_URL: $DATABASE_URL" && \
     cp prisma/schema.build.prisma prisma/schema.prisma && \
