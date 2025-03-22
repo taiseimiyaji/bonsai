@@ -13,10 +13,11 @@ RUN apt-get update && \
 
 # ビルド時には BuildKit の秘密マウント機能でシークレットを利用する
 RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
-    echo "Using build-time DATABASE_URL: $DATABASE_URL" && \
-    cp prisma/schema.build.prisma prisma/schema.prisma && \
-    npm ci && \
-    npm run build
+    sh -c 'if [ -z "$DATABASE_URL" ]; then echo "DATABASE_URL is empty"; exit 1; fi && \
+           echo "Using build-time DATABASE_URL: $DATABASE_URL" && \
+           cp prisma/schema.build.prisma prisma/schema.prisma && \
+           npm ci && \
+           npm run build'
 
 # ────────────────────────────── Runner ステージ ──────────────────────────────
 FROM node:22-slim AS runner
