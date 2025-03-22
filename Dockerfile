@@ -11,12 +11,10 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
-# ビルド時には BuildKit の秘密マウント機能で本番用 DATABASE_URL を一時的に利用する
-# シークレットは /run/secrets/DATABASE_URL にマウントされ、環境変数としても利用されます
-RUN --mount=type=secret,id=DATABASE_URL,env=DATABASE_URL \
+# ビルド時には BuildKit の秘密マウント機能でシークレットを利用する
+RUN --mount=type=secret,id=DATABASE_URL \
     export DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
     echo "Using build-time DATABASE_URL: $DATABASE_URL" && \
-    # ここでビルド用の Prisma スキーマに差し替える場合（単一管理なら不要）
     cp prisma/schema.build.prisma prisma/schema.prisma && \
     npm ci && \
     npm run build
