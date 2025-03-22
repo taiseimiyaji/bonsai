@@ -10,7 +10,8 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci
+# --legacy-peer-deps フラグを使用して依存関係の競合を解決
+RUN npm install --legacy-peer-deps
 
 # ────────────────────────────── Builder ステージ ──────────────────────────────
 FROM base AS builder
@@ -24,6 +25,8 @@ RUN npx prisma generate
 # Next.jsのビルド
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
+# ビルド時にモックデータを使用するためのフラグ
+ENV NEXT_PHASE phase-production-build
 RUN npm run build
 
 # ────────────────────────────── Runner ステージ ──────────────────────────────
