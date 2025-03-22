@@ -1,11 +1,15 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
     args:
-      - build
+      - 'build'
+      - '--secret'
+      - 'id=DATABASE_URL,src=/workspace/secrets/DATABASE_URL'
       - '-t'
       - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
       - '.'
-
+      
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - push
@@ -26,6 +30,11 @@ steps:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+
+availableSecrets:
+  secretManager:
+    - versionName: 'projects/123705768223/secrets/DATABASE_URL/versions/latest'
+      env: 'DATABASE_URL'
 
 images:
   - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
