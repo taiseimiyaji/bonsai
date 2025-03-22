@@ -155,13 +155,15 @@ export class PrismaRssFeedRepository implements RssFeedRepository {
 
   async save(feed: RssFeed): Promise<Result<RssFeed, DomainError>> {
     try {
+      // ユーザーIDがnullの場合は明示的にundefinedを設定して、
+      // Prismaがnullではなくundefinedとして扱うようにする
       const savedFeed = await prisma.rssFeed.create({
         data: {
           url: feed.url as string,
           title: feed.title,
           description: feed.description,
           feedType: feed.feedType,
-          userId: feed.userId,
+          userId: feed.userId || undefined,
           lastFetched: feed.lastFetched
         }
       });

@@ -15,6 +15,10 @@ const mockData = {
   article: [],
   userFeed: [],
   publicFeed: [],
+  rssFeed: [],
+  rssArticle: [],
+  rssReadStatus: [],
+  cronExecutionLog: [],
 };
 
 // モックPrismaクライアント
@@ -67,6 +71,34 @@ const mockPrismaClient = {
     create: async () => Promise.resolve({}),
     update: async () => Promise.resolve({}),
     delete: async () => Promise.resolve({}),
+  },
+  // RSSフィード関連のモックを追加
+  rssFeed: {
+    findMany: async () => Promise.resolve(mockData.rssFeed),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+  },
+  rssArticle: {
+    findMany: async () => Promise.resolve(mockData.rssArticle),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+    createMany: async () => Promise.resolve({ count: 0 }),
+  },
+  rssReadStatus: {
+    findMany: async () => Promise.resolve(mockData.rssReadStatus),
+    findUnique: async () => Promise.resolve(null),
+    create: async () => Promise.resolve({}),
+    update: async () => Promise.resolve({}),
+    delete: async () => Promise.resolve({}),
+    upsert: async () => Promise.resolve({}),
+  },
+  cronExecutionLog: {
+    create: async () => Promise.resolve({}),
+    findMany: async () => Promise.resolve(mockData.cronExecutionLog),
   },
   $connect: async () => Promise.resolve(),
   $disconnect: async () => Promise.resolve(),
