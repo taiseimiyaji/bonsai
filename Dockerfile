@@ -22,12 +22,15 @@ COPY tailwind.config.ts ./
 COPY postcss.config.js ./
 COPY types ./types
 
-# BuildKitの秘密マウントでシークレットをファイルとしてマウント
-RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
-    sh -c 'DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
-           echo "Using build-time DATABASE_URL with length: ${#DATABASE_URL}" && \
-           npm ci && \
-           npm run build'
+# ビルド時はダミーのデータベースURLを使用してPrismaがDB接続しないようにする
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=dummy"
+ENV DIRECT_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=dummy"
+ENV NODE_ENV="production"
+
+# ビルド実行
+RUN npm ci && \
+    npx prisma generate && \
+    npm run build
 
 # ────────────────────────────── Runner ステージ ──────────────────────────────
 FROM node:22-slim AS runner
