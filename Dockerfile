@@ -1,80 +1,55 @@
 # syntax=docker/dockerfile:1.2
-# ────────────────────────────── Builder ステージ ──────────────────────────────
-FROM node:22-slim AS builder
+# ────────────────────────────── Base ステージ ──────────────────────────────
+FROM node:18-alpine AS base
+
+# ────────────────────────────── Dependencies ステージ ──────────────────────────────
+FROM base AS deps
+# Install dependencies only when needed
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# libssl1.1 のインストール
-RUN apt-get update && \
-    apt-get install -y wget && \
-    wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
-    dpkg -i libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
-    rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
-    rm -rf /var/lib/apt/lists/*
+# Install dependencies based on the preferred package manager
+COPY package.json package-lock.json* ./
+RUN npm ci
 
-# 必要なファイルをコピー
-COPY package.json package-lock.json ./
-COPY prisma ./prisma
-COPY public ./public
-COPY app ./app
-COPY next.config.js ./
-COPY tsconfig.json ./
-COPY tailwind.config.ts ./
-COPY postcss.config.js ./
-COPY types ./types
+# ────────────────────────────── Builder ステージ ──────────────────────────────
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# ビルド時はダミーのデータベースURLを使用してPrismaがDB接続しないようにする
-ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=dummy"
-ENV DIRECT_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=dummy"
-ENV NODE_ENV="production"
+# Prismaの生成
+RUN npx prisma generate
 
-# ビルド前にtrpc-clientファイルの存在確認
-RUN ls -la /app/app/api/trpc/
-
-# devDependenciesを含めて全ての依存関係をインストール
-RUN npm ci --include=dev && \
-    npx prisma generate && \
-    npm run build
+# Next.jsのビルド
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+RUN npm run build
 
 # ────────────────────────────── Runner ステージ ──────────────────────────────
-FROM node:22-slim AS runner
+FROM base AS runner
 WORKDIR /app
 
-# libssl1.1 と postgresql-client のインストール
-RUN apt-get update && \
-    apt-get install -y wget postgresql-client && \
-    wget http://security.debian.org/debian-security/pool/updates/main/o/openssl/libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
-    dpkg -i libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
-    rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
-    rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Builder ステージから必要なファイルをコピー
-COPY --from=builder /app/.next ./.next
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# 必要なファイルのみをコピー
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/prisma ./prisma
 
-# production 用の依存関係を再インストールする必要はない
-# RUN npm install --production
+# スタンドアロンビルドの場合は.next/standaloneを使用
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-ENV NODE_ENV=production
-EXPOSE 8080
+USER nextjs
 
-# prisma フォルダのコピー
-COPY prisma /app/prisma
+EXPOSE 3000
 
-# app フォルダのコピー（ランタイムでも必要なファイルがある可能性があるため）
-COPY app /app/app
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
 
-# entrypoint.sh をコピーして実行権限を付与
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-# マイグレーションログ用ディレクトリの作成
-RUN mkdir -p /app/logs
-
-# 環境変数確認用スクリプトのコピーと権限付与
-COPY check-env.sh /app/check-env.sh
-RUN chmod +x /app/check-env.sh
-
-# コンテナ起動時に entrypoint.sh を実行
-CMD ["/app/entrypoint.sh"]
+# サーバーの起動
+CMD ["node", "server.js"]

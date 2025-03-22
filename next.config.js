@@ -14,7 +14,7 @@ const nextConfig = {
 		// 静的最適化を無効化
 		isrFlushToDisk: false,
 		// node:プロトコルをサポート
-		serverComponentsExternalPackages: ['pg', 'pg-native', 'buffer', 'crypto', 'util', 'assert'],
+		serverComponentsExternalPackages: ['pg', 'pg-native'],
 	},
 	// 環境変数に基づいて設定を変更
 	env: {
@@ -37,21 +37,13 @@ const nextConfig = {
 				fs: false,
 				path: false,
 				os: false,
-				crypto: require.resolve('crypto-browserify'),
-				stream: require.resolve('stream-browserify'),
-				buffer: require.resolve('buffer/'),
-				util: require.resolve('util/'),
-				assert: require.resolve('assert/'),
-				process: require.resolve('process/browser'),
+				crypto: false,
+				stream: false,
+				buffer: false,
+				util: false,
+				assert: false,
+				process: false,
 			};
-
-			// buffer/polyfillを提供するためのプラグイン
-			config.plugins.push(
-				new config.constructor.ProvidePlugin({
-					Buffer: ['buffer', 'Buffer'],
-					process: 'process/browser',
-				})
-			);
 		}
 
 		return config;
