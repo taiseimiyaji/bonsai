@@ -33,10 +33,9 @@ export class RssApplicationService {
   }
 
   // 新しいRSSフィードを登録する
-  async registerFeed(
+  async addFeed(
     url: string, 
-    userId: string | null = null, 
-    isPublic: boolean = false
+    userId: string | null = null
   ): Promise<Result<RssFeed, DomainError | ApplicationError>> {
     // URLのバリデーション
     const urlResult = createRssUrl(url);
@@ -69,7 +68,7 @@ export class RssApplicationService {
         validUrl,
         parsedFeed.title || 'Untitled Feed',
         parsedFeed.description || null,
-        isPublic ? 'PUBLIC' : 'PRIVATE',
+        'PRIVATE', // ユーザーが追加する場合はPRIVATE
         userId,
         new Date()
       );
@@ -103,12 +102,73 @@ export class RssApplicationService {
   }
 
   // 管理者用: 公開フィードを登録する
-  async registerPublicFeed(url: string, adminUserId: string): Promise<Result<RssFeed, DomainError | ApplicationError>> {
-    return this.registerFeed(url, adminUserId, true);
+  async addPublicFeed(url: string): Promise<Result<RssFeed, DomainError | ApplicationError>> {
+    // URLのバリデーション
+    const urlResult = createRssUrl(url);
+    if (!urlResult.ok) {
+      return { ok: false, error: urlResult.error };
+    }
+    const validUrl = urlResult.value;
+
+    // 既存のフィードをチェック
+    const existingFeedResult = await this.feedRepository.findByUrl(validUrl);
+    if (!existingFeedResult.ok) {
+      return { ok: false, error: existingFeedResult.error };
+    }
+
+    if (existingFeedResult.value) {
+      return { 
+        ok: false, 
+        error: new ApplicationError('このRSSフィードは既に登録されています') 
+      };
+    }
+
+    try {
+      // RSSフィードを取得して情報を抽出
+      const parser = new (await import('rss-parser')).default();
+      const parsedFeed = await parser.parseURL(url);
+
+      // フィードを作成
+      const feed = createRssFeed(
+        '', // IDはリポジトリで生成
+        validUrl,
+        parsedFeed.title || 'Untitled Feed',
+        parsedFeed.description || null,
+        'PUBLIC', // 管理者が追加する場合はPUBLIC
+        null, // 公開フィードはユーザーIDなし
+        new Date()
+      );
+
+      // フィードを保存
+      const savedFeedResult = await this.feedRepository.save(feed);
+      if (!savedFeedResult.ok) {
+        return { ok: false, error: savedFeedResult.error };
+      }
+      const savedFeed = savedFeedResult.value;
+
+      // 記事を取得して保存
+      const articlesResult = await this.feedService.fetchAndParseFeed(savedFeed);
+      if (!articlesResult.ok) {
+        // フィードは保存されているが、記事の取得に失敗した場合
+        return { ok: true, value: savedFeed };
+      }
+
+      if (articlesResult.value.length > 0) {
+        await this.articleRepository.saveMany(articlesResult.value);
+      }
+
+      return { ok: true, value: savedFeed };
+    } catch (error) {
+      console.error('フィード登録エラー:', error);
+      return { 
+        ok: false, 
+        error: new ApplicationError(`フィードの登録に失敗しました: ${(error as Error).message}`) 
+      };
+    }
   }
 
   // フィードを削除する
-  async deleteFeed(feedId: string, userId: string | null): Promise<Result<boolean, DomainError | ApplicationError>> {
+  async deleteFeed(feedId: string): Promise<Result<boolean, DomainError | ApplicationError>> {
     // フィードの存在確認
     const feedResult = await this.feedRepository.findById(feedId);
     if (!feedResult.ok) {
@@ -120,14 +180,6 @@ export class RssApplicationService {
       return { 
         ok: false, 
         error: new ApplicationError('指定されたフィードが見つかりません') 
-      };
-    }
-
-    // 権限チェック
-    if (userId && feed.userId !== userId && feed.feedType !== 'PUBLIC') {
-      return { 
-        ok: false, 
-        error: new ApplicationError('このフィードを削除する権限がありません') 
       };
     }
 
@@ -212,7 +264,7 @@ export class RssApplicationService {
     return this.articleRepository.findLatestUserArticles(userId, limit);
   }
 
-  // フィードの記事を取得する
+  // 特定のフィードの記事を取得する
   async getFeedArticles(feedId: string): Promise<Result<RssArticle[], DomainError>> {
     return this.articleRepository.findByFeedId(feedId);
   }

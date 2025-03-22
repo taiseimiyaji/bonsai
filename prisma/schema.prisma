@@ -15,18 +15,19 @@ generator client {
 }
 
 model User {
-  id        String      @id @default(uuid())
-  googleId  String      @unique
-  email     String      @unique
-  name      String?
-  image     String?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  Todo      Todo[]
-  Scrap     Scrap[]
-  ScrapBook ScrapBook[]
-  rssFeeds  RssFeed[]   @relation("UserRssFeeds")
-  role      UserRole    @default(USER)
+  id           String          @id @default(uuid())
+  googleId     String          @unique
+  email        String          @unique
+  name         String?
+  image        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  Todo         Todo[]
+  Scrap        Scrap[]
+  ScrapBook    ScrapBook[]
+  rssFeeds     RssFeed[]       @relation("UserRssFeeds")
+  rssReadStatus RssReadStatus[] 
+  role         UserRole        @default(USER)
 }
 
 enum UserRole {
@@ -120,21 +121,40 @@ enum RssFeedType {
 }
 
 model RssArticle {
-  id          String   @id @default(uuid())
+  id          String          @id @default(uuid())
   feedId      String
-  feed        RssFeed  @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  feed        RssFeed         @relation(fields: [feedId], references: [id], onDelete: Cascade)
   title       String
-  link        String   @unique
+  link        String          @unique
   description String?
   content     String?
   author      String?
   publishedAt DateTime
   imageUrl    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  readStatus  RssReadStatus[] 
 
   @@index([feedId])
   @@index([publishedAt])
+}
+
+// 記事の既読状態を管理するモデル
+model RssReadStatus {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId String
+  article   RssArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  isRead    Boolean    @default(true)
+  readAt    DateTime   @default(now())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, articleId])
+  @@index([userId])
+  @@index([articleId])
+  @@index([isRead])
 }
 
 // 定期実行ジョブのログ
