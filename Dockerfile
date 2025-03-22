@@ -11,6 +11,16 @@ RUN apt-get update && \
     rm libssl1.1_1.1.1n-0+deb10u6_$(dpkg --print-architecture).deb && \
     rm -rf /var/lib/apt/lists/*
 
+# 必要なファイルをコピー
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+COPY public ./public
+COPY app ./app
+COPY next.config.js ./
+COPY tsconfig.json ./
+COPY middleware.ts ./
+COPY .env.example ./
+
 # BuildKitの秘密マウントでシークレットをファイルとしてマウント
 RUN --mount=type=secret,id=DATABASE_URL,dst=/run/secrets/DATABASE_URL \
     sh -c 'DATABASE_URL=$(cat /run/secrets/DATABASE_URL) && \
