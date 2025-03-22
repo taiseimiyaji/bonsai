@@ -15,6 +15,8 @@ const nextConfig = {
 		isrFlushToDisk: false,
 		// node:プロトコルをサポート
 		serverComponentsExternalPackages: ['pg', 'pg-native', 'undici', 'open-graph-scraper'],
+		// Server Actionsを有効化
+		serverActions: true,
 	},
 	// 環境変数に基づいて設定を変更
 	env: {
