@@ -39,23 +39,21 @@ jobs:
 
       - name: マイグレーションの実行
         run: |
-          # GitHubのシークレットからデータベース接続情報を取得
-          # 一時的にコンテナを実行してマイグレーションを実行
+          # entrypoint.shを使わずに直接Prismaコマンドを実行
           docker run --rm \
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
-            -e RUN_MIGRATIONS=true \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            npx prisma migrate deploy
+            /bin/sh -c "npx prisma migrate deploy"
 
       - name: データベース接続テスト
         run: |
-          # データベース接続テストのみを実行（サーバーは起動しない）
+          # データベース接続テストのみを実行
           docker run --rm \
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            npx prisma db execute --stdin < ./scripts/test-connection.sql || echo "データベース接続テストに失敗しました"
+            /bin/sh -c "npx prisma db execute --stdin < /app/scripts/test-connection.sql"
 
       - name: Cloud Runへのデプロイ
         run: |
