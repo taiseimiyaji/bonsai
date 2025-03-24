@@ -47,7 +47,7 @@ export const nextAuthOptions: NextAuthOptions = {
 			console.log('SignIn Callback - Start:', { user, account, profile });
 			try {
 				if (account?.provider === "google") {
-					const googleId = profile?.sub;
+					const googleId = account.providerAccountId; 
 					console.log('Looking up user with googleId:', googleId);
 					
 					let dbUser = await prisma.user.findUnique({
@@ -61,15 +61,20 @@ export const nextAuthOptions: NextAuthOptions = {
 							return "/auth/error";
 						}
 						console.log('Creating new user:', { email: user.email, name: user.name, googleId });
-						dbUser = await prisma.user.create({
-							data: {
-								googleId,
-								email: user.email,
-								name: user.name,
-								image: user.image,
-							},
-						});
-						console.log('New user created:', dbUser);
+						try {
+							dbUser = await prisma.user.create({
+								data: {
+									googleId,
+									email: user.email,
+									name: user.name,
+									image: user.image,
+								},
+							});
+							console.log('New user created:', dbUser);
+						} catch (createError) {
+							console.error('Error creating user:', createError);
+							return "/auth/error";
+						}
 					}
 
 					if(user.image && dbUser.image !== user.image) {
@@ -88,7 +93,7 @@ export const nextAuthOptions: NextAuthOptions = {
 				return false;
 			} catch (error) {
 				console.error('SignIn Callback - Error:', error);
-				return false;
+				return "/auth/error";
 			}
 		},
 	},

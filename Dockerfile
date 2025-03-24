@@ -36,8 +36,12 @@ WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# sharpをインストール（画像最適化に必要）
-RUN apk add --no-cache vips-dev
+# システムの依存関係をインストール
+RUN apk add --no-cache \
+    vips-dev \
+    openssl \
+    libc6-compat
+
 RUN npm install --no-save sharp
 
 RUN addgroup --system --gid 1001 nodejs
@@ -49,15 +53,13 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/scripts ./scripts
 
-# 必要なファイルのみをコピー
-COPY --from=builder /app/public ./public
+# アプリケーションのファイルをコピー
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# スタンドアロンビルドの場合は.next/standaloneを使用
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
-# キャッシュディレクトリの権限を設定
-RUN mkdir -p .next/cache && chown -R nextjs:nodejs .next/cache
+# Prismaエンジンのパーミッションを設定
+RUN chmod -R 755 /app/node_modules/.prisma
 
 USER nextjs
 
