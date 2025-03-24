@@ -5,7 +5,7 @@ FROM node:18-alpine AS base
 # ────────────────────────────── Dependencies ステージ ──────────────────────────────
 FROM base AS deps
 # Install dependencies only when needed
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
@@ -18,6 +18,11 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# システムの依存関係をインストール
+RUN apk add --no-cache \
+    openssl \
+    libc6-compat
 
 # Prismaの生成
 RUN npx prisma generate
@@ -68,5 +73,4 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# サーバーを起動するコマンドを設定
 CMD ["node", "server.js"]
