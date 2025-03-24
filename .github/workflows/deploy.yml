@@ -10,7 +10,6 @@ env:
   PROJECT_ID: bonsai-410001
   SERVICE_NAME: bonsai
   REGION: asia-northeast1
-  REGISTRY: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}
 
 jobs:
   deploy:
