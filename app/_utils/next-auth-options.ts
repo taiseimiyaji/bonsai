@@ -12,6 +12,10 @@ export const nextAuthOptions: NextAuthOptions = {
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
 		}),
 	],
+	pages: {
+		error: '/auth/error',
+		signIn: '/auth/signin',
+	},
 	callbacks: {
 		jwt: async ({ token, user, account, profile }) => {
 			console.log('JWT Callback - Input:', { token, user, account, profile });
