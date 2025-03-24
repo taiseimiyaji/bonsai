@@ -68,7 +68,13 @@ jobs:
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }},RUN_MIGRATIONS=false"
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},\
+              DIRECT_URL=${{ secrets.DIRECT_URL }},\
+              RUN_MIGRATIONS=false,\
+              NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }},\
+              NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }},\
+              GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},\
+              GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}"
 
       - name: デプロイ結果の確認
         run: |
