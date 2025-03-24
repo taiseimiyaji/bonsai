@@ -1,6 +1,11 @@
+'use client';
+
 import { useSearchParams } from 'next/navigation';
 
 export default function ErrorPage() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
+
   return (
     <div className="flex h-screen">
       <div className="m-auto text-center">
@@ -8,6 +13,11 @@ export default function ErrorPage() {
         <p className="text-gray-600 mb-4">
           申し訳ありませんが、認証中にエラーが発生しました。
         </p>
+        {error && (
+          <p className="text-red-500 mb-4">
+            エラー: {error}
+          </p>
+        )}
         <p className="text-gray-600 mb-8">
           以下の点をご確認ください：
           <ul className="list-disc text-left max-w-md mx-auto mt-4">
