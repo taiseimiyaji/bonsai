@@ -15,10 +15,9 @@ export const nextAuthOptions: NextAuthOptions = {
 	callbacks: {
 		jwt: async ({ token, user, account, profile }) => {
 			if (user) {
-				token.user = user;
-				const u = user as any;
-				token.role = u.role;
-				token.userId = u.id;
+				// userオブジェクトからIDを取得
+				token.userId = user.id;
+				token.role = (user as any).role;
 			}
 			if (account) {
 				token.accessToken = account.access_token;
@@ -37,34 +36,40 @@ export const nextAuthOptions: NextAuthOptions = {
 			};
 		},
 		signIn: async ({ user, account, profile }) => {
-			if (account?.provider === "google") {
-				const googleId = profile?.sub;
-				let dbUser = await prisma.user.findUnique({
-					where: { googleId: googleId },
-				});
-				if (!dbUser) {
-					if (!user.email || !user.name || !googleId) {
-						return "/auth/error";
+			try {
+				if (account?.provider === "google") {
+					const googleId = profile?.sub;
+					let dbUser = await prisma.user.findUnique({
+						where: { googleId: googleId },
+					});
+					if (!dbUser) {
+						if (!user.email || !user.name || !googleId) {
+							return "/auth/error";
+						}
+						dbUser = await prisma.user.create({
+							data: {
+								googleId,
+								email: user.email,
+								name: user.name,
+								image: user.image,
+							},
+						});
 					}
-					dbUser = await prisma.user.create({
-						data: {
-							googleId,
-							email: user.email,
-							name: user.name,
-							image: user.image,
-						},
-					});
+					if(user.image && dbUser.image !== user.image) {
+						await prisma.user.update({
+							where: { id: dbUser.id },
+							data: { image: user.image },
+						});
+					}
+					// userオブジェクトにデータベースのユーザーIDを設定
+					user.id = dbUser.id;
+					return true;
 				}
-				if(user.image && dbUser.image !== user.image) {
-					await prisma.user.update({
-						where: { id: dbUser.id },
-						data: { image: user.image },
-					});
-				}
-				// user オブジェクトにデータベースのユーザー ID を追加
-				user.id = dbUser.id;
+				return false;
+			} catch (error) {
+				console.error("Error in signIn callback:", error);
+				return false;
 			}
-			return true;
 		},
 	},
 };
