@@ -39,12 +39,11 @@ jobs:
 
       - name: マイグレーションの実行
         run: |
-          # Secret Managerからデータベース接続情報を取得
-          DATABASE_URL=$(gcloud secrets versions access latest --secret=DATABASE_URL)
-          
+          # GitHubのシークレットからデータベース接続情報を取得
           # 一時的にコンテナを実行してマイグレーションを実行
           docker run --rm \
-            -e DATABASE_URL="$DATABASE_URL" \
+            -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
             -e RUN_MIGRATIONS=true \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             npx prisma migrate deploy
@@ -56,5 +55,4 @@ jobs:
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars RUN_MIGRATIONS=false \
-            --update-secrets DATABASE_URL=DATABASE_URL:latest
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }},RUN_MIGRATIONS=false"
