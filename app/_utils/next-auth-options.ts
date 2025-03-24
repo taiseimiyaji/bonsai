@@ -14,19 +14,20 @@ export const nextAuthOptions: NextAuthOptions = {
 	],
 	callbacks: {
 		jwt: async ({ token, user, account, profile }) => {
+			console.log('JWT Callback - Input:', { token, user, account, profile });
 			if (user) {
-				token.user = user;
-				const u = user as any;
-				token.role = u.role;
-				token.userId = u.id;
+				token.userId = user.id;
+				token.role = (user as any).role;
 			}
 			if (account) {
 				token.accessToken = account.access_token;
 			}
+			console.log('JWT Callback - Output:', token);
 			return token;
 		},
 		session: ({ session, token }) => {
-			return {
+			console.log('Session Callback - Input:', { session, token });
+			const result = {
 				...session,
 				userId: token.userId,
 				user: {
@@ -35,36 +36,56 @@ export const nextAuthOptions: NextAuthOptions = {
 					role: token.role,
 				},
 			};
+			console.log('Session Callback - Output:', result);
+			return result;
 		},
 		signIn: async ({ user, account, profile }) => {
-			if (account?.provider === "google") {
-				const googleId = profile?.sub;
-				let dbUser = await prisma.user.findUnique({
-					where: { googleId: googleId },
-				});
-				if (!dbUser) {
-					if (!user.email || !user.name || !googleId) {
-						return "/auth/error";
+			console.log('SignIn Callback - Start:', { user, account, profile });
+			try {
+				if (account?.provider === "google") {
+					const googleId = profile?.sub;
+					console.log('Looking up user with googleId:', googleId);
+					
+					let dbUser = await prisma.user.findUnique({
+						where: { googleId: googleId },
+					});
+					console.log('Existing user:', dbUser);
+
+					if (!dbUser) {
+						if (!user.email || !user.name || !googleId) {
+							console.error('Missing required user data:', { email: user.email, name: user.name, googleId });
+							return "/auth/error";
+						}
+						console.log('Creating new user:', { email: user.email, name: user.name, googleId });
+						dbUser = await prisma.user.create({
+							data: {
+								googleId,
+								email: user.email,
+								name: user.name,
+								image: user.image,
+							},
+						});
+						console.log('New user created:', dbUser);
 					}
-					dbUser = await prisma.user.create({
-						data: {
-							googleId,
-							email: user.email,
-							name: user.name,
-							image: user.image,
-						},
-					});
+
+					if(user.image && dbUser.image !== user.image) {
+						console.log('Updating user image:', { oldImage: dbUser.image, newImage: user.image });
+						await prisma.user.update({
+							where: { id: dbUser.id },
+							data: { image: user.image },
+						});
+					}
+
+					user.id = dbUser.id;
+					console.log('SignIn Callback - Success:', { userId: user.id });
+					return true;
 				}
-				if(user.image && dbUser.image !== user.image) {
-					await prisma.user.update({
-						where: { id: dbUser.id },
-						data: { image: user.image },
-					});
-				}
-				// user オブジェクトにデータベースのユーザー ID を追加
-				user.id = dbUser.id;
+				console.log('SignIn Callback - Unsupported provider:', account?.provider);
+				return false;
+			} catch (error) {
+				console.error('SignIn Callback - Error:', error);
+				return false;
 			}
-			return true;
 		},
 	},
 };
