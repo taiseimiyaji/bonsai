@@ -71,8 +71,8 @@ export default function FeedArticleList({ feedId }: FeedArticleListProps) {
             
             <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
               <span>
-                {article.pubDate 
-                  ? new Date(article.pubDate).toLocaleString('ja-JP')
+                {article.publishedAt 
+                  ? new Date(article.publishedAt).toLocaleString('ja-JP')
                   : '日付不明'
                 }
               </span>
