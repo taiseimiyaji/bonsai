@@ -47,8 +47,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+COPY --from=builder /app/scripts ./scripts
 
 # 必要なファイルのみをコピー
 COPY --from=builder /app/public ./public
@@ -67,5 +66,5 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# エントリポイントスクリプトを使用してサーバーを起動
-ENTRYPOINT ["./entrypoint.sh"]
+# サーバーを起動するコマンドを設定
+CMD ["node", "server.js"]

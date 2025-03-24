@@ -10,6 +10,7 @@ env:
   PROJECT_ID: bonsai-410001
   SERVICE_NAME: bonsai
   REGION: asia-northeast1
+  REGISTRY: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}
 
 jobs:
   deploy:
@@ -28,6 +29,14 @@ jobs:
       - name: Google Cloud SDKのセットアップ
         uses: google-github-actions/setup-gcloud@v1
 
+      - name: Artifact Registryリポジトリの作成
+        run: |
+          # リポジトリが存在しない場合のみ作成
+          gcloud artifacts repositories create cloud-run-source-deploy \
+            --repository-format=docker \
+            --location=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }} || true
+
       - name: Dockerリポジトリの設定
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
@@ -39,21 +48,19 @@ jobs:
 
       - name: マイグレーションの実行
         run: |
-          # entrypoint.shを使わずに直接Prismaコマンドを実行
           docker run --rm \
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            /bin/sh -c "npx prisma migrate deploy"
+            npx prisma migrate deploy
 
       - name: データベース接続テスト
         run: |
-          # データベース接続テストのみを実行
           docker run --rm \
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            /bin/sh -c "npx prisma db execute --stdin < /app/scripts/test-connection.sql"
+            npx prisma db execute --stdin < ./scripts/test-connection.sql
 
       - name: Cloud Runへのデプロイ
         run: |
@@ -63,3 +70,10 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},DIRECT_URL=${{ secrets.DIRECT_URL }},RUN_MIGRATIONS=false"
+
+      - name: デプロイ結果の確認
+        run: |
+          echo "デプロイが完了しました"
+          gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format='get(status.url)'
