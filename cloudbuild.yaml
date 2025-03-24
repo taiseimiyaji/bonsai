@@ -15,20 +15,21 @@ steps:
       - 'push'
       - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
 
-  # マイグレーション用のジョブを実行（Secret Managerから直接シークレットを取得）
-  - name: 'gcr.io/google-appengine/exec-wrapper'
+  # マイグレーション用のステップを実行
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
     args:
-      - '-i'
-      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
-      - '-s'
-      - 'bonsai-410001'
-      - '--'
-      - 'sh'
       - '-c'
       - |
-        export DATABASE_URL=$$(gcloud secrets versions access latest --secret=DATABASE_URL)
-        export RUN_MIGRATIONS=true
-        npx prisma migrate deploy
+        # Secret Managerからデータベース接続情報を取得
+        export DATABASE_URL=$(gcloud secrets versions access latest --secret=DATABASE_URL)
+        
+        # 一時的にコンテナを実行してマイグレーションを実行
+        docker run --rm \
+          -e DATABASE_URL="$$DATABASE_URL" \
+          -e RUN_MIGRATIONS=true \
+          asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA \
+          npx prisma migrate deploy
 
   # Cloud Runにデプロイ（マイグレーションなし）
   - name: 'gcr.io/cloud-builders/gcloud'
