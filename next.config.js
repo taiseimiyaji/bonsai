@@ -4,7 +4,18 @@ const nextConfig = {
 		domains: [
 			"lh3.googleusercontent.com", 
 			"res.cloudinary.com",
-			"storage.googleapis.com"
+			"storage.googleapis.com",
+			"asset.uniqlo.com"
+		],
+		remotePatterns: [
+			{
+				protocol: 'https',
+				hostname: '**',
+			},
+			{
+				protocol: 'http',
+				hostname: '**',
+			},
 		],
 	},
 	// すべてのページをSSR前提にする設定
