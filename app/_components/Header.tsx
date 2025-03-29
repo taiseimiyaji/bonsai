@@ -16,6 +16,22 @@ const Header = ({ session }: { session: Session | null }) => {
 			<ul className="flex items-center space-x-4">
 				{session ? (
 					<>
+						{/* 機能リンクを追加 */}
+						<li>
+							<Link href="/rss" className="font-medium text-white hover:text-blue-300">
+								RSS
+							</Link>
+						</li>
+						<li>
+							<Link href="/scrap" className="font-medium text-white hover:text-blue-300">
+								スクラップ
+							</Link>
+						</li>
+						<li>
+							<Link href="/todos" className="font-medium text-white hover:text-blue-300">
+								TODO
+							</Link>
+						</li>
 						<li>
 							<Image
 								src={session.user?.image ?? ""}
