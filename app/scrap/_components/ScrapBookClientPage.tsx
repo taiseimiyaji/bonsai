@@ -15,7 +15,8 @@ export interface ScrapBook {
     image: string | null;
   };
   createdAt: string; 
-  updatedAt: string; 
+  updatedAt: string;
+  status: "PUBLIC" | "PRIVATE"; // ステータスフィールドを追加
 }
 
 export interface ScrapBookClientPageProps {
@@ -28,7 +29,7 @@ export default function ScrapBookClientPage({ scrapBooks }: ScrapBookClientPageP
     <div className="flex flex-col min-h-[100dvh]">
       <main className="flex-1 bg-gray-100 dark:bg-gray-700 p-6">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">他のユーザーが作成したスクラップ</h1>
+          <h1 className="text-3xl font-bold mb-6">公開されたスクラップ</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {scrapBooks.map((scrapBook) => (
               <ScrapBookCard
@@ -40,6 +41,7 @@ export default function ScrapBookClientPage({ scrapBooks }: ScrapBookClientPageP
                 user={scrapBook.user}
                 createdAt={scrapBook.createdAt}
                 updatedAt={scrapBook.updatedAt}
+                status={scrapBook.status} // ステータスプロパティを追加
               />
             ))}
           </div>

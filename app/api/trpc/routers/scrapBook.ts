@@ -150,4 +150,53 @@ export const scrapBookRouter = router({
                 throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' });
             }
         }),
+    updateScrapBookStatus: publicProcedure
+        .input(
+            z.object({
+                id: z.string().min(1),
+                status: z.enum(['PUBLIC', 'PRIVATE']),
+            })
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { session } = ctx;
+
+            if (!session || !session.user || !session.userId) {
+                throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Unauthorized User' });
+            }
+
+            const userId = session.userId;
+
+            try {
+                // スクラップブックが存在するか確認
+                const scrapBook = await prisma.scrapBook.findUnique({
+                    where: {
+                        id: input.id,
+                    },
+                });
+
+                if (!scrapBook) {
+                    throw new TRPCError({ code: 'NOT_FOUND', message: 'ScrapBook not found' });
+                }
+
+                // 所有者かどうか確認
+                if (scrapBook.userId !== userId) {
+                    throw new TRPCError({ code: 'FORBIDDEN', message: 'You do not have permission to update this ScrapBook' });
+                }
+
+                // ステータスを更新
+                const updatedScrapBook = await prisma.scrapBook.update({
+                    where: {
+                        id: input.id,
+                    },
+                    data: {
+                        status: input.status,
+                    },
+                });
+
+                return updatedScrapBook;
+            } catch (error) {
+                console.error('Error updating ScrapBook status:', error);
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Internal Server Error' });
+            }
+        }),
 });

@@ -16,7 +16,8 @@ const mockScrapBooks: ScrapBook[] = [
       image: null
     },
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    status: "PUBLIC" // ステータスフィールドを追加
   }
 ];
 
@@ -48,7 +49,8 @@ export default async function ScrapPage() {
           image: book.user.image
         },
         createdAt: book.createdAt.toISOString(),
-        updatedAt: book.updatedAt.toISOString()
+        updatedAt: book.updatedAt.toISOString(),
+        status: book.status // ステータスフィールドを追加
       }));
     }
   } catch (error) {
