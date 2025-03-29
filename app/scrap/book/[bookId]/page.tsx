@@ -38,7 +38,17 @@ export default async function ScrapBookPage({ params }: { params: { bookId: stri
             <main className="flex-1 bg-gray-100 dark:bg-gray-700 p-6">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-3xl font-bold mb-6">{scrapBook.title}</h1>
-                    <ScrapClient scraps={scraps} bookId={bookId} isOwner={isOwner} />
+                    <ScrapClient 
+                        scraps={scraps} 
+                        bookId={bookId} 
+                        isOwner={isOwner} 
+                        scrapBook={{
+                            id: scrapBook.id,
+                            title: scrapBook.title,
+                            description: scrapBook.description,
+                            status: scrapBook.status
+                        }}
+                    />
                 </div>
             </main>
         </div>

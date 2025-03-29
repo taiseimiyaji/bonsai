@@ -5,11 +5,18 @@ import ScrapThread from '@/app/scrap/_components/ScrapThread';
 import ScrapForm from '@/app/scrap/_components/ScrapForm';
 import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
 import {trpc} from "@/app/api/trpc/trpc-client";
+import { GlobeIcon, LockClosedIcon } from '@heroicons/react/solid';
 
 interface ScrapClientProps {
     scraps: ScrapWithTimeAgo[];
     bookId: string;
     isOwner: boolean;
+    scrapBook: {
+        id: string;
+        title: string;
+        description: string | null;
+        status: "PUBLIC" | "PRIVATE";
+    };
 }
 
 export default function ScrapClient(
@@ -17,8 +24,11 @@ export default function ScrapClient(
         scraps: initialScraps,
         bookId,
         isOwner,
+        scrapBook,
     }: ScrapClientProps) {
     const [showForm, setShowForm] = useState(false);
+    const [status, setStatus] = useState<"PUBLIC" | "PRIVATE">(scrapBook.status);
+    const [isUpdating, setIsUpdating] = useState(false);
 
     const utils = trpc.useContext();
 
@@ -37,9 +47,31 @@ export default function ScrapClient(
         },
     });
 
+    const updateStatusMutation = trpc.scrapBook.updateScrapBookStatus.useMutation({
+        onSuccess: () => {
+            utils.scrapBook.getScrapBookById.invalidate({ id: bookId });
+        },
+    });
+
     const handleToggleForm = useCallback(() => {
         setShowForm((prevShowForm) => !prevShowForm);
     }, []);
+
+    const handleToggleStatus = async () => {
+        const newStatus = status === "PUBLIC" ? "PRIVATE" : "PUBLIC";
+        setIsUpdating(true);
+        try {
+            await updateStatusMutation.mutateAsync({
+                id: bookId,
+                status: newStatus,
+            });
+            setStatus(newStatus);
+        } catch (error) {
+            console.error('Failed to update status:', error);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     useEffect(() => {
         if (showForm) {
@@ -150,6 +182,31 @@ export default function ScrapClient(
 
     return (
         <>
+            {isOwner && (
+                <div className="mb-6 flex items-center justify-between bg-gray-200 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="flex items-center">
+                        <span className="mr-2">公開設定:</span>
+                        <div className={`flex items-center px-2 py-1 rounded-full ${status === "PUBLIC" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"}`}>
+                            {status === "PUBLIC" ? (
+                                <><GlobeIcon className="w-4 h-4 mr-1" /> 公開</>
+                            ) : (
+                                <><LockClosedIcon className="w-4 h-4 mr-1" /> 非公開</>
+                            )}
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleToggleStatus}
+                        disabled={isUpdating}
+                        className={`px-4 py-2 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 ${
+                            status === "PUBLIC" 
+                                ? "bg-gray-500 hover:bg-gray-600 text-white focus:ring-gray-500" 
+                                : "bg-green-500 hover:bg-green-600 text-white focus:ring-green-500"
+                        }`}
+                    >
+                        {isUpdating ? '更新中...' : status === "PUBLIC" ? '非公開にする' : '公開する'}
+                    </button>
+                </div>
+            )}
             {scraps.length > 0 && <ScrapThread scraps={scraps}/>}
             <div className="mt-6 flex justify-end">
                 {showForm && isOwner && (

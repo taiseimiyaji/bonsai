@@ -30,6 +30,7 @@ export default async function ScrapBookList() {
 								user={scrapBook.user}
 								createdAt={scrapBook.createdAt.toISOString()}
 								updatedAt={scrapBook.updatedAt.toISOString()}
+								status={scrapBook.status} // ステータスプロパティを追加
 							/>
 						))}
 					</div>

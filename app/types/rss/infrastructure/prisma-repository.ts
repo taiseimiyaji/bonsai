@@ -285,14 +285,17 @@ export class PrismaRssArticleRepository implements RssArticleRepository {
 
   async findByLink(link: string): Promise<Result<RssArticle | null, DomainError>> {
     try {
+      console.log(`[DEBUG] リンクで記事検索: link=${link}`);
       const article = await prisma.rssArticle.findUnique({
         where: { link }
       });
 
       if (!article) {
+        console.log(`[DEBUG] 記事が見つかりません: link=${link}`);
         return ok(null);
       }
 
+      console.log(`[DEBUG] 記事が見つかりました: id=${article.id}, title=${article.title}`);
       return ok(
         createRssArticle(
           article.id,
@@ -307,7 +310,7 @@ export class PrismaRssArticleRepository implements RssArticleRepository {
         )
       );
     } catch (error) {
-      console.error('リンク検索エラー:', error);
+      console.error(`[DEBUG] リンク検索エラー: ${(error as Error).message}`, error);
       return err(new DomainError(`リンクによる記事検索に失敗しました: ${(error as Error).message}`));
     }
   }
@@ -479,6 +482,7 @@ export class PrismaRssArticleRepository implements RssArticleRepository {
 
   async saveMany(articles: RssArticle[]): Promise<Result<RssArticle[], DomainError>> {
     try {
+      console.log(`[DEBUG] 複数記事保存開始: ${articles.length}件`);
       const data = articles.map(article => ({
         feedId: article.feedId as string,
         title: article.title,
@@ -490,11 +494,13 @@ export class PrismaRssArticleRepository implements RssArticleRepository {
         imageUrl: article.imageUrl
       }));
 
+      console.log(`[DEBUG] トランザクション開始`);
       const savedArticles = await prisma.$transaction(
         data.map(item => 
           prisma.rssArticle.create({ data: item })
         )
       );
+      console.log(`[DEBUG] トランザクション完了: ${savedArticles.length}件保存`);
 
       return ok(
         savedArticles.map(article => 
@@ -512,7 +518,7 @@ export class PrismaRssArticleRepository implements RssArticleRepository {
         )
       );
     } catch (error) {
-      console.error('複数記事保存エラー:', error);
+      console.error(`[DEBUG] 複数記事保存エラー: ${(error as Error).message}`, error);
       return err(new DomainError(`複数記事の保存に失敗しました: ${(error as Error).message}`));
     }
   }
