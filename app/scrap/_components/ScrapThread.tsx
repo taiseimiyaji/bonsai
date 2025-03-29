@@ -46,10 +46,10 @@ export default function ScrapThread({ scraps }: ScrapThreadProps) {
 
                         {/* ogpDataが存在する場合はOGP情報を表示 */}
                         {scrap.ogpData && (
-                            <div className="flex gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
                                 {/* OGP画像がある場合は画像を表示 */}
                                 {scrap.ogpData.image && scrap.ogpData.image.trim() !== "" && (
-                                    <div className="flex-shrink-0 w-full max-w-sm bg-gray-200 dark:bg-gray-800 rounded-md overflow-hidden">
+                                    <div className="flex-shrink-0 w-full sm:w-auto sm:max-w-[200px] bg-gray-200 dark:bg-gray-800 rounded-md overflow-hidden">
                                         <Image
                                             src={scrap.ogpData.image}
                                             alt={`${scrap.ogpData.title} OGP`}
@@ -59,18 +59,19 @@ export default function ScrapThread({ scraps }: ScrapThreadProps) {
                                         />
                                     </div>
                                 )}
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-semibold">
+                                <div className="flex-1 overflow-hidden">
+                                    <h3 className="text-base sm:text-lg font-semibold break-words line-clamp-2">
                                         {scrap.ogpData.title}
                                     </h3>
-                                    <p className="text-gray-500 dark:text-gray-400 line-clamp-2">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
                                         {scrap.ogpData.description}
                                     </p>
                                     <a
                                         href={scrap.ogpData.link}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-blue-500 hover:underline"
+                                        className="text-xs sm:text-sm text-blue-500 hover:underline truncate block mt-1"
+                                        title={scrap.ogpData.link}
                                     >
                                         {scrap.ogpData.link}
                                     </a>
@@ -80,13 +81,13 @@ export default function ScrapThread({ scraps }: ScrapThreadProps) {
 
                         {/* View Moreボタン */}
                         {scrap.ogpData && (
-                        <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center justify-start mt-2 sm:mt-4">
                             <Link
                                 href={scrap.ogpData.link}
                                 target="_blank"
                             >
-                                <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
-                                    View More
+                                <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 sm:px-4 sm:py-2 text-sm rounded">
+                                    詳細を見る
                                 </button>
                             </Link>
                         </div>
