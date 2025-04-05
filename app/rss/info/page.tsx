@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import { trpc } from '../../trpc-client';
 import ArticleList from './_components/ArticleList';
 import SourceFilter from './_components/SourceFilter';
+import FlipClock from './_components/Clock';
 
 // タブの種類を定義
 type TabType = 'userFeeds' | 'zennTrend' | 'qiitaTrend';
@@ -207,13 +208,12 @@ export default function InfoPage() {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">情報ダッシュボード</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">ダッシュボード</h1>
+        <FlipClock />
+      </div>
       
       <div className="mb-8">
-        <p className="text-gray-600 dark:text-gray-300 mb-4">
-          収集した記事の一覧です。検索やフィルターを使って必要な情報を見つけることができます。
-        </p>
-        
         {/* タブ切り替え - ログイン中のみユーザーフィードタブを表示 */}
         <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
           <ul className="flex flex-wrap -mb-px">
