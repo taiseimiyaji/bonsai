@@ -112,9 +112,6 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
         icon: '✓',
         duration: 2000
       });
-      
-      // 既読になったら後で読むリストから自動的に削除
-      cleanupReadLaterMutation.mutate();
     },
     onError: (error) => {
       toast.error(`既読にできませんでした: ${error.message}`, {
