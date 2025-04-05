@@ -15,6 +15,13 @@ import {
 } from '../domain';
 import { RssFeedRepository, RssArticleRepository } from '../repository';
 
+// トレンドフィード URL
+const ZENN_FEED_URL = 'https://zenn.dev/feed';
+const QIITA_FEED_URL = 'https://qiita.com/popular-items/feed';
+
+// 除外するトレンドフィードのURLリスト
+const TREND_FEED_URLS = [ZENN_FEED_URL, QIITA_FEED_URL];
+
 // Prismaを使用したRssFeedRepositoryの実装
 export class PrismaRssFeedRepository implements RssFeedRepository {
   async findById(id: string): Promise<Result<RssFeed | null, DomainError>> {
@@ -99,7 +106,11 @@ export class PrismaRssFeedRepository implements RssFeedRepository {
   async findPublicFeeds(): Promise<Result<RssFeed[], DomainError>> {
     try {
       const feeds = await prisma.rssFeed.findMany({
-        where: { feedType: 'PUBLIC' },
+        where: { 
+          feedType: 'PUBLIC',
+          // トレンドフィードを除外
+          url: { notIn: TREND_FEED_URLS }
+        },
         orderBy: { createdAt: 'desc' }
       });
 
@@ -129,7 +140,9 @@ export class PrismaRssFeedRepository implements RssFeedRepository {
           OR: [
             { userId },
             { feedType: 'PUBLIC' }
-          ]
+          ],
+          // トレンドフィードを除外
+          url: { notIn: TREND_FEED_URLS }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -376,7 +389,9 @@ export class PrismaRssArticleRepository implements RssArticleRepository {
       const articles = await prisma.rssArticle.findMany({
         where: {
           feed: {
-            feedType: 'PUBLIC'
+            feedType: 'PUBLIC',
+            // トレンドフィードを除外
+            url: { notIn: TREND_FEED_URLS }
           }
         },
         orderBy: { publishedAt: 'desc' },
@@ -415,7 +430,9 @@ export class PrismaRssArticleRepository implements RssArticleRepository {
             OR: [
               { userId },
               { feedType: 'PUBLIC' }
-            ]
+            ],
+            // トレンドフィードを除外
+            url: { notIn: TREND_FEED_URLS }
           }
         },
         orderBy: { publishedAt: 'desc' },

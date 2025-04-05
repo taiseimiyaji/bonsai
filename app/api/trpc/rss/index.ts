@@ -9,7 +9,9 @@ import {
   getUserArticles,
   getFeedArticles,
   markAsRead,
-  getReadStatuses
+  getReadStatuses,
+  getZennTrendArticles,
+  getQiitaTrendArticles
 } from './articles';
 
 // フィード関連のプロシージャ
@@ -23,6 +25,15 @@ import {
   updateFeed
 } from './feeds';
 
+// 後で読む機能のプロシージャ
+import {
+  addToReadLater,
+  removeFromReadLater,
+  getReadLaterArticles,
+  isInReadLater,
+  cleanupReadLater
+} from './read-later';
+
 /**
  * RSSルーター
  */
@@ -33,6 +44,8 @@ export const rssRouter = router({
   getFeedArticles,
   markAsRead,
   getReadStatuses,
+  getZennTrendArticles,
+  getQiitaTrendArticles,
   
   // フィード関連
   addFeed,
@@ -42,4 +55,11 @@ export const rssRouter = router({
   getPublicFeeds,
   updateAllFeeds,
   updateFeed,
+  
+  // 後で読む機能
+  addToReadLater,
+  removeFromReadLater,
+  getReadLaterArticles,
+  isInReadLater,
+  cleanupReadLater,
 });

@@ -16,19 +16,20 @@ generator client {
 }
 
 model User {
-  id           String          @id @default(uuid())
-  googleId     String          @unique
-  email        String          @unique
-  name         String?
-  image        String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  Todo         Todo[]
-  Scrap        Scrap[]
-  ScrapBook    ScrapBook[]
-  rssFeeds     RssFeed[]       @relation("UserRssFeeds")
+  id            String          @id @default(uuid())
+  googleId      String          @unique
+  email         String          @unique
+  name          String?
+  image         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  Todo          Todo[]
+  Scrap         Scrap[]
+  ScrapBook     ScrapBook[]
+  rssFeeds      RssFeed[]       @relation("UserRssFeeds")
   rssReadStatus RssReadStatus[] 
-  role         UserRole        @default(USER)
+  readLater     ReadLater[]     // 後で読む機能の関連付け
+  role          UserRole        @default(USER)
 }
 
 enum UserRole {
@@ -135,6 +136,7 @@ model RssArticle {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   readStatus  RssReadStatus[] 
+  readLater   ReadLater[]     // 後で読む機能の関連付け
 
   @@index([feedId])
   @@index([publishedAt])
@@ -156,6 +158,23 @@ model RssReadStatus {
   @@index([userId])
   @@index([articleId])
   @@index([isRead])
+}
+
+// 後で読む機能のモデル
+model ReadLater {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  articleId String
+  article   RssArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  addedAt   DateTime   @default(now())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, articleId])
+  @@index([userId])
+  @@index([articleId])
+  @@index([addedAt])
 }
 
 // 定期実行ジョブのログ

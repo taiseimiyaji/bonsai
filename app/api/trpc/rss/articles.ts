@@ -254,3 +254,183 @@ export const getReadStatuses = authenticatedProcedure
     
     return readStatusMap;
   });
+
+/**
+ * Zennのトレンド記事を取得
+ */
+export const getZennTrendArticles = publicProcedure
+  .input(z.object({ 
+    limit: z.number().min(1).max(100).default(50),
+    readFilter: z.enum(['all', 'read', 'unread']).optional().default('all')
+  }))
+  .query(async ({ ctx, input }) => {
+    try {
+      // Zennのフィードを検索
+      const { prisma } = await import('@/prisma/prisma');
+      let zennFeed = await prisma.rssFeed.findFirst({
+        where: { url: 'https://zenn.dev/feed' }
+      });
+      
+      // Zennのフィードが存在しない場合は作成
+      if (!zennFeed) {
+        const result = await rssService.addPublicFeed('https://zenn.dev/feed');
+        if (!result.ok) {
+          throw new TRPCError({ 
+            code: 'INTERNAL_SERVER_ERROR', 
+            message: `Zennフィードの追加に失敗しました: ${result.error.message}` 
+          });
+        }
+        // 型の不一致を解消するため、Prismaから再取得
+        const newFeed = await prisma.rssFeed.findFirst({
+          where: { url: 'https://zenn.dev/feed' }
+        });
+        
+        if (!newFeed) {
+          throw new TRPCError({ 
+            code: 'INTERNAL_SERVER_ERROR', 
+            message: 'Zennフィードの取得に失敗しました' 
+          });
+        }
+        
+        zennFeed = newFeed;
+      } else {
+        // フィードが存在する場合は更新（最新の記事を取得）
+        await rssService.updateFeed(zennFeed.id);
+      }
+      
+      // Zennの記事を取得
+      const articles = await prisma.rssArticle.findMany({
+        where: { feedId: zennFeed.id },
+        orderBy: { publishedAt: 'desc' },
+        take: input.limit
+      });
+      
+      // ログインユーザーの場合は既読状態を取得
+      let readStatusMap = new Map();
+      if (ctx.session?.userId) {
+        const readStatuses = await prisma.rssReadStatus.findMany({
+          where: {
+            userId: ctx.session.userId as string,
+            articleId: { in: articles.map(article => article.id) }
+          }
+        });
+        readStatusMap = new Map(readStatuses.map(status => [status.articleId, status]));
+      }
+      
+      // 記事にフィード情報と既読状態を追加
+      let articlesWithFeed = articles.map(article => {
+        const readStatus = ctx.session?.userId ? readStatusMap.get(article.id) : null;
+        
+        return {
+          ...formatArticle(article),
+          feed: { title: zennFeed.title, id: zennFeed.id },
+          isRead: !!readStatus
+        };
+      });
+      
+      // 既読/未読フィルタリング
+      if (ctx.session?.userId && input.readFilter !== 'all') {
+        articlesWithFeed = articlesWithFeed.filter(article => 
+          input.readFilter === 'read' ? article.isRead : !article.isRead
+        );
+      }
+      
+      return articlesWithFeed;
+    } catch (error) {
+      console.error('Zennトレンド記事取得エラー:', error);
+      throw new TRPCError({ 
+        code: 'INTERNAL_SERVER_ERROR', 
+        message: `Zennトレンド記事の取得に失敗しました: ${(error as Error).message}` 
+      });
+    }
+  });
+
+/**
+ * Qiitaのトレンド記事を取得
+ */
+export const getQiitaTrendArticles = publicProcedure
+  .input(z.object({ 
+    limit: z.number().min(1).max(100).default(50),
+    readFilter: z.enum(['all', 'read', 'unread']).optional().default('all')
+  }))
+  .query(async ({ ctx, input }) => {
+    try {
+      // Qiitaのフィードを検索
+      const { prisma } = await import('@/prisma/prisma');
+      let qiitaFeed = await prisma.rssFeed.findFirst({
+        where: { url: 'https://qiita.com/popular-items/feed' }
+      });
+      
+      // Qiitaのフィードが存在しない場合は作成
+      if (!qiitaFeed) {
+        const result = await rssService.addPublicFeed('https://qiita.com/popular-items/feed');
+        if (!result.ok) {
+          throw new TRPCError({ 
+            code: 'INTERNAL_SERVER_ERROR', 
+            message: `Qiitaフィードの追加に失敗しました: ${result.error.message}` 
+          });
+        }
+        // 型の不一致を解消するため、Prismaから再取得
+        const newFeed = await prisma.rssFeed.findFirst({
+          where: { url: 'https://qiita.com/popular-items/feed' }
+        });
+        
+        if (!newFeed) {
+          throw new TRPCError({ 
+            code: 'INTERNAL_SERVER_ERROR', 
+            message: 'Qiitaフィードの取得に失敗しました' 
+          });
+        }
+        
+        qiitaFeed = newFeed;
+      } else {
+        // フィードが存在する場合は更新（最新の記事を取得）
+        await rssService.updateFeed(qiitaFeed.id);
+      }
+      
+      // Qiitaの記事を取得
+      const articles = await prisma.rssArticle.findMany({
+        where: { feedId: qiitaFeed.id },
+        orderBy: { publishedAt: 'desc' },
+        take: input.limit
+      });
+      
+      // ログインユーザーの場合は既読状態を取得
+      let readStatusMap = new Map();
+      if (ctx.session?.userId) {
+        const readStatuses = await prisma.rssReadStatus.findMany({
+          where: {
+            userId: ctx.session.userId as string,
+            articleId: { in: articles.map(article => article.id) }
+          }
+        });
+        readStatusMap = new Map(readStatuses.map(status => [status.articleId, status]));
+      }
+      
+      // 記事にフィード情報と既読状態を追加
+      let articlesWithFeed = articles.map(article => {
+        const readStatus = ctx.session?.userId ? readStatusMap.get(article.id) : null;
+        
+        return {
+          ...formatArticle(article),
+          feed: { title: qiitaFeed.title, id: qiitaFeed.id },
+          isRead: !!readStatus
+        };
+      });
+      
+      // 既読/未読フィルタリング
+      if (ctx.session?.userId && input.readFilter !== 'all') {
+        articlesWithFeed = articlesWithFeed.filter(article => 
+          input.readFilter === 'read' ? article.isRead : !article.isRead
+        );
+      }
+      
+      return articlesWithFeed;
+    } catch (error) {
+      console.error('Qiitaトレンド記事取得エラー:', error);
+      throw new TRPCError({ 
+        code: 'INTERNAL_SERVER_ERROR', 
+        message: `Qiitaトレンド記事の取得に失敗しました: ${(error as Error).message}` 
+      });
+    }
+  });
