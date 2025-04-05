@@ -154,7 +154,7 @@ export default function ReadLaterPage() {
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <ArticleList 
-            articles={readLaterArticlesQuery.data} 
+            articles={readLaterArticlesQuery.data || []} 
             onArticleRead={handleArticleRead}
           />
         </div>
