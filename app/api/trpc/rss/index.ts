@@ -9,7 +9,9 @@ import {
   getUserArticles,
   getFeedArticles,
   markAsRead,
-  getReadStatuses
+  getReadStatuses,
+  getZennTrendArticles,
+  getQiitaTrendArticles
 } from './articles';
 
 // フィード関連のプロシージャ
@@ -33,6 +35,8 @@ export const rssRouter = router({
   getFeedArticles,
   markAsRead,
   getReadStatuses,
+  getZennTrendArticles,
+  getQiitaTrendArticles,
   
   // フィード関連
   addFeed,
