@@ -25,6 +25,15 @@ import {
   updateFeed
 } from './feeds';
 
+// 後で読む機能のプロシージャ
+import {
+  addToReadLater,
+  removeFromReadLater,
+  getReadLaterArticles,
+  isInReadLater,
+  cleanupReadLater
+} from './read-later';
+
 /**
  * RSSルーター
  */
@@ -46,4 +55,11 @@ export const rssRouter = router({
   getPublicFeeds,
   updateAllFeeds,
   updateFeed,
+  
+  // 後で読む機能
+  addToReadLater,
+  removeFromReadLater,
+  getReadLaterArticles,
+  isInReadLater,
+  cleanupReadLater,
 });

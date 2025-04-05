@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { trpc } from '../../../trpc-client';
 import { useSession } from 'next-auth/react';
-import { FaLink, FaMarkdown, FaHeading, FaBookmark, FaTimes, FaCircle, FaCheck } from 'react-icons/fa';
+import { FaLink, FaMarkdown, FaHeading, FaBookmark, FaTimes, FaCircle, FaCheck, FaClock, FaRegClock } from 'react-icons/fa';
 import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
@@ -46,6 +46,8 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [savedArticles, setSavedArticles] = useState<Set<string>>(new Set());
   const [savingArticle, setSavingArticle] = useState<string | null>(null);
+  const [readLaterArticles, setReadLaterArticles] = useState<Set<string>>(new Set());
+  const [processingReadLater, setProcessingReadLater] = useState<string | null>(null);
   
   // スクラップブック一覧を取得
   const scrapBooksQuery = trpc.scrapBook.getScrapBooks.useQuery(undefined, {
@@ -110,6 +112,9 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
         icon: '✓',
         duration: 2000
       });
+      
+      // 既読になったら後で読むリストから自動的に削除
+      cleanupReadLaterMutation.mutate();
     },
     onError: (error) => {
       toast.error(`既読にできませんでした: ${error.message}`, {
@@ -117,6 +122,108 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
       });
     }
   });
+  
+  // 後で読むリストに追加するミューテーション
+  const addToReadLaterMutation = trpc.rss.addToReadLater.useMutation({
+    onSuccess: (result, variables) => {
+      // 成功時に後で読むリストに追加
+      setReadLaterArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.add(variables.articleId);
+        return newSet;
+      });
+      
+      // 処理中状態を解除
+      setProcessingReadLater(null);
+      
+      // トースト通知
+      toast.success('後で読むリストに追加しました', {
+        icon: '🕒',
+        duration: 2000
+      });
+    },
+    onError: (error) => {
+      // 処理中状態を解除
+      setProcessingReadLater(null);
+      
+      // エラー通知
+      toast.error(`後で読むリストに追加できませんでした: ${error.message}`, {
+        duration: 3000
+      });
+    }
+  });
+  
+  // 後で読むリストから削除するミューテーション
+  const removeFromReadLaterMutation = trpc.rss.removeFromReadLater.useMutation({
+    onSuccess: (result, variables) => {
+      // 成功時に後で読むリストから削除
+      setReadLaterArticles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(variables.articleId);
+        return newSet;
+      });
+      
+      // 処理中状態を解除
+      setProcessingReadLater(null);
+      
+      // トースト通知
+      toast.success('後で読むリストから削除しました', {
+        icon: '✓',
+        duration: 2000
+      });
+    },
+    onError: (error) => {
+      // 処理中状態を解除
+      setProcessingReadLater(null);
+      
+      // エラー通知
+      toast.error(`後で読むリストから削除できませんでした: ${error.message}`, {
+        duration: 3000
+      });
+    }
+  });
+  
+  // 既読になった記事を後で読むリストから自動的に削除するミューテーション
+  const cleanupReadLaterMutation = trpc.rss.cleanupReadLater.useMutation({
+    onSuccess: (result) => {
+      if (result.count > 0) {
+        // 後で読むリストの状態を更新（既読の記事を削除）
+        setReadLaterArticles(prev => {
+          const newSet = new Set(prev);
+          readArticles.forEach(articleId => {
+            newSet.delete(articleId);
+          });
+          return newSet;
+        });
+        
+        // トースト通知
+        toast.success(`既読の${result.count}件の記事を後で読むリストから削除しました`, {
+          icon: '🧹',
+          duration: 2000
+        });
+      }
+    }
+  });
+  
+  // 記事が後で読むリストに追加されているかチェック
+  const isInReadLaterQuery = trpc.rss.isInReadLater.useQuery(
+    { 
+      articleIds: articles.map(article => article.id) 
+    },
+    {
+      enabled: isLoggedIn && articles.length > 0,
+      onSuccess: (data) => {
+        // 後で読むリストの状態を更新
+        const readLaterIds = new Set<string>();
+        Object.entries(data).forEach(([id, isInReadLater]) => {
+          if (isInReadLater) {
+            readLaterIds.add(id);
+          }
+        });
+        setReadLaterArticles(readLaterIds);
+      }
+    }
+  );
   
   // 記事の展開/折りたたみを切り替える
   const toggleArticle = (articleId: string) => {
@@ -155,6 +262,30 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
     
     // 記事を新しいタブで開く
     window.open(article.link, '_blank', 'noopener,noreferrer');
+  };
+  
+  // 後で読むリストに追加/削除する関数
+  const toggleReadLater = (articleId: string) => {
+    if (!isLoggedIn) {
+      toast.error('後で読むリストを使用するにはログインが必要です', {
+        icon: '🔒',
+        duration: 3000
+      });
+      return;
+    }
+    
+    // 処理中の場合は何もしない
+    if (processingReadLater === articleId) return;
+    
+    // 処理中状態をセット
+    setProcessingReadLater(articleId);
+    
+    // 後で読むリストに追加/削除
+    if (readLaterArticles.has(articleId)) {
+      removeFromReadLaterMutation.mutate({ articleId });
+    } else {
+      addToReadLaterMutation.mutate({ articleId });
+    }
   };
   
   // URLをクリップボードにコピーする関数
@@ -219,6 +350,11 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
     });
   };
   
+  // 後で読むページへ移動する関数
+  const goToReadLaterPage = () => {
+    router.push('/rss/read-later');
+  };
+  
   return (
     <div className="space-y-6">
       {/* トースト通知のコンテナ */}
@@ -234,11 +370,35 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
         }}
       />
       
+      {isLoggedIn && (
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <button
+              onClick={goToReadLaterPage}
+              className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              <FaClock size={14} />
+              後で読むリスト
+            </button>
+          </div>
+          
+          {readLaterArticles.size > 0 && (
+            <div className="text-sm">
+              <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full">
+                {readLaterArticles.size}件の記事を後で読む
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      
       {articles.map((article) => {
         const isExpanded = expandedArticles.has(article.id);
         const isRead = readArticles.has(article.id) || article.isRead;
         const isSaved = savedArticles.has(article.id);
         const isSaving = savingArticle === article.id;
+        const isInReadLater = readLaterArticles.has(article.id);
+        const isProcessingReadLater = processingReadLater === article.id;
         
         return (
           <article 
@@ -309,6 +469,12 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
                         {article.title}
                       </a>
                     </h3>
+                    
+                    {isLoggedIn && isInReadLater && (
+                      <span className="text-blue-500 ml-2 flex-shrink-0 text-xs bg-blue-100 dark:bg-blue-900 px-2 py-0.5 rounded-full" title="後で読む">
+                        後で読む
+                      </span>
+                    )}
                   </div>
                   
                   {article.description && (
@@ -366,6 +532,24 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
                       >
                         <FaHeading size={16} />
                       </button>
+                      {isLoggedIn && (
+                        <button
+                          onClick={() => toggleReadLater(article.id)}
+                          className={`${
+                            isInReadLater 
+                              ? 'text-blue-500' 
+                              : 'text-gray-500 dark:text-gray-400'
+                          } hover:opacity-80 transition-opacity relative`}
+                          aria-label={isInReadLater ? "後で読むリストから削除" : "後で読むリストに追加"}
+                          title={isInReadLater ? "後で読むリストから削除" : "後で読むリストに追加"}
+                          disabled={isProcessingReadLater}
+                        >
+                          {isInReadLater ? <FaClock size={16} /> : <FaRegClock size={16} />}
+                          {isProcessingReadLater && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                          )}
+                        </button>
+                      )}
                       {isLoggedIn && (
                         <button
                           onClick={() => openScrapModal(article)}
