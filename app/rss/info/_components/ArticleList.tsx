@@ -4,11 +4,11 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { trpc } from '../../../trpc-client';
 import { useSession } from 'next-auth/react';
-import { FaLink, FaMarkdown, FaHeading, FaBookmark, FaTimes, FaCircle } from 'react-icons/fa';
-import { toast } from 'react-hot-toast';
+import { FaLink, FaMarkdown, FaHeading, FaBookmark, FaTimes, FaCircle, FaCheck } from 'react-icons/fa';
+import { toast, Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
 interface Article {
@@ -44,6 +44,8 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
   );
   const [showScrapModal, setShowScrapModal] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [savedArticles, setSavedArticles] = useState<Set<string>>(new Set());
+  const [savingArticle, setSavingArticle] = useState<string | null>(null);
   
   // スクラップブック一覧を取得
   const scrapBooksQuery = trpc.scrapBook.getScrapBooks.useQuery(undefined, {
@@ -54,12 +56,37 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
   // スクラップ作成のミューテーション
   const addScrapMutation = trpc.scrap.addScrap.useMutation({
     onSuccess: () => {
-      toast.success('スクラップに保存しました');
+      if (selectedArticle) {
+        // 成功時にトースト通知を表示
+        toast.success('スクラップに保存しました', {
+          icon: '📝',
+          duration: 3000
+        });
+        
+        // 保存済み記事に追加
+        setSavedArticles(prev => {
+          const newSet = new Set(prev);
+          newSet.add(selectedArticle.id);
+          return newSet;
+        });
+        
+        // 保存中状態を解除
+        setSavingArticle(null);
+      }
+      
+      // モーダルを閉じる
       setShowScrapModal(false);
       setSelectedArticle(null);
     },
     onError: (error) => {
-      toast.error(`エラー: ${error.message}`);
+      // エラー時にトースト通知を表示
+      toast.error(`エラー: ${error.message}`, {
+        icon: '❌',
+        duration: 5000
+      });
+      
+      // 保存中状態を解除
+      setSavingArticle(null);
     }
   });
   
@@ -77,6 +104,17 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
       if (onArticleRead) {
         onArticleRead(variables.articleId);
       }
+      
+      // 既読にしたことをトースト通知
+      toast.success('記事を既読にしました', {
+        icon: '✓',
+        duration: 2000
+      });
+    },
+    onError: (error) => {
+      toast.error(`既読にできませんでした: ${error.message}`, {
+        duration: 3000
+      });
     }
   });
   
@@ -123,11 +161,16 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
   const copyToClipboard = (text: string, type: string) => {
     navigator.clipboard.writeText(text)
       .then(() => {
-        toast.success(`${type}をコピーしました`);
+        toast.success(`${type}をコピーしました`, {
+          icon: '📋',
+          duration: 2000
+        });
       })
       .catch((err) => {
         console.error(`${type}のコピーに失敗しました:`, err);
-        toast.error(`${type}のコピーに失敗しました`);
+        toast.error(`${type}のコピーに失敗しました`, {
+          duration: 3000
+        });
       });
   };
 
@@ -150,7 +193,10 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
   // スクラップモーダルを表示する関数
   const openScrapModal = (article: Article) => {
     if (!session || !session.userId) {
-      toast.error('スクラップを保存するにはログインが必要です');
+      toast.error('スクラップを保存するにはログインが必要です', {
+        icon: '🔒',
+        duration: 3000
+      });
       return;
     }
 
@@ -161,7 +207,11 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
   // スクラップを保存する関数
   const saveToScrap = (scrapBookId: string) => {
     if (!selectedArticle || !session?.userId) return;
-
+    
+    // 保存中状態をセット
+    setSavingArticle(selectedArticle.id);
+    
+    // スクラップに保存
     addScrapMutation.mutate({
       scrapBookId,
       content: `RSS記事: ${selectedArticle.title}\n${selectedArticle.link}`,
@@ -171,9 +221,24 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
   
   return (
     <div className="space-y-6">
+      {/* トースト通知のコンテナ */}
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#333',
+            color: '#fff',
+            borderRadius: '8px',
+            padding: '16px'
+          },
+        }}
+      />
+      
       {articles.map((article) => {
         const isExpanded = expandedArticles.has(article.id);
         const isRead = readArticles.has(article.id) || article.isRead;
+        const isSaved = savedArticles.has(article.id);
+        const isSaving = savingArticle === article.id;
         
         return (
           <article 
@@ -304,11 +369,19 @@ export default function ArticleList({ articles, isZennFeed = false, onArticleRea
                       {isLoggedIn && (
                         <button
                           onClick={() => openScrapModal(article)}
-                          className="text-yellow-500 hover:opacity-80 transition-opacity"
-                          aria-label="スクラップに保存"
-                          title="スクラップに保存"
+                          className={`${
+                            isSaved 
+                              ? 'text-green-500' 
+                              : 'text-yellow-500'
+                          } hover:opacity-80 transition-opacity relative`}
+                          aria-label={isSaved ? "保存済み" : "スクラップに保存"}
+                          title={isSaved ? "保存済み" : "スクラップに保存"}
+                          disabled={isSaving}
                         >
-                          <FaBookmark size={16} />
+                          {isSaved ? <FaCheck size={16} /> : <FaBookmark size={16} />}
+                          {isSaving && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                          )}
                         </button>
                       )}
                     </div>
