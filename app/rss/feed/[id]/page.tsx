@@ -10,11 +10,12 @@ import { serverClient } from '@/app/api/trpc/trpc-server';
 import FeedArticleList from './_components/FeedArticleList';
 import { prisma } from '@/prisma/prisma';
 
-export default async function FeedPage({ params }: { params: { id: string } }) {
+export default async function FeedPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const feedId = params.id;
   const session = await getServerSession(nextAuthOptions);
   const isLoggedIn = !!session;
-  
+
   // フィードの情報を取得
   try {
     const feed = await prisma.rssFeed.findUnique({

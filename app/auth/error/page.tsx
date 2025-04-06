@@ -1,6 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
 export default function ErrorPage() {
   const searchParams = useSearchParams();
@@ -26,12 +27,12 @@ export default function ErrorPage() {
             <li>ブラウザのプライバシー設定が適切か</li>
           </ul>
         </p>
-        <a
+        <Link
           href="/"
           className="inline-block bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
         >
           ホームに戻る
-        </a>
+        </Link>
       </div>
     </div>
   );
