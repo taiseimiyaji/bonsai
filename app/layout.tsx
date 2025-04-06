@@ -20,11 +20,13 @@ export default async function RootLayout({
 }) {
 	const session = await getServerSession(nextAuthOptions);
 	return (
-		<html lang="en">
-			<body className={inter.className}>
+		<html lang="en" className="dark">
+			<body className={`${inter.className} bg-gray-900 text-white min-h-screen`}>
 				<NextAuthProvider>
 					<Header session={session} />
-					{children}
+					<main className="min-h-[calc(100vh-4rem)]">
+						{children}
+					</main>
 				</NextAuthProvider>
 			</body>
 		</html>
