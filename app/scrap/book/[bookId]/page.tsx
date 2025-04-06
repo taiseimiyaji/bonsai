@@ -5,7 +5,8 @@ import {getServerSession} from "next-auth/next";
 import {nextAuthOptions} from "@/app/_utils/next-auth-options";
 import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
 
-export default async function ScrapBookPage({ params }: { params: { bookId: string } }) {
+export default async function ScrapBookPage(props: { params: Promise<{ bookId: string }> }) {
+    const params = await props.params;
     const { bookId: bookId } = params;
 
     const scrapBook = await trpcCaller(async (caller) => {

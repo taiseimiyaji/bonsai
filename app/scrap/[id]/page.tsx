@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/prisma/prisma';
 
-export default async function ScrapPage({ params }: { params: { id: string } }) {
+export default async function ScrapPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const scrap = await prisma.scrap.findUnique({
       where: { id: params.id },
