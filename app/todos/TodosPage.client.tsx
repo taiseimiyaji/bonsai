@@ -1,38 +1,88 @@
 "use client";
-import { createTodo, deleteTodo, updateTodo } from "@/app/todos/action";
 import { useState } from "react";
+import { trpc } from "@/app/trpc-client";
+import { toast } from "react-hot-toast";
 
 export default function TodosPageClient(props: {
 	initialTodos: any;
 	userId: string;
 }) {
 	const [newTodo, setNewTodo] = useState("");
-
-	const handleCheck = async (todoId: string, completed: boolean) => {
-		const formData = new FormData();
-		formData.append("id", todoId);
-		formData.append("completed", completed ? "true" : "false");
-		await updateTodo(todoId, formData);
-		window.location.reload();
+	const [todos, setTodos] = useState(props.initialTodos);
+	
+	// tRPCのクエリとミューテーションを設定
+	const utils = trpc.useContext();
+	const todosQuery = trpc.todo.getAll.useQuery(undefined, {
+		initialData: { todos: props.initialTodos },
+		enabled: false, // 初期データがあるので自動フェッチは無効化
+	});
+	
+	const createMutation = trpc.todo.create.useMutation({
+		onSuccess: () => {
+			setNewTodo("");
+			utils.todo.getAll.invalidate();
+			toast.success("Todoが追加されました");
+		},
+		onError: (error) => {
+			toast.error(`エラー: ${error.message}`);
+		}
+	});
+	
+	const updateMutation = trpc.todo.update.useMutation({
+		onSuccess: () => {
+			utils.todo.getAll.invalidate();
+		},
+		onError: (error) => {
+			toast.error(`エラー: ${error.message}`);
+		}
+	});
+	
+	const deleteMutation = trpc.todo.delete.useMutation({
+		onSuccess: () => {
+			utils.todo.getAll.invalidate();
+			toast.success("Todoが削除されました");
+		},
+		onError: (error) => {
+			toast.error(`エラー: ${error.message}`);
+		}
+	});
+	
+	// データ更新後にtodosを更新
+	const refreshTodos = async () => {
+		const result = await utils.todo.getAll.fetch();
+		if (result.todos) {
+			setTodos(result.todos);
+		}
 	};
 
-	const handleCreate = async () => {
-		const formData = new FormData();
-		formData.append("title", newTodo);
-		try {
-			await createTodo(formData, props.userId);
-		} catch (e) {
-			console.error(e);
+	const handleCheck = async (todoId: string, completed: boolean) => {
+		updateMutation.mutate({
+			id: todoId,
+			data: { completed }
+		}, {
+			onSuccess: refreshTodos
+		});
+	};
+
+	const handleCreate = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!newTodo.trim()) {
+			toast.error("タイトルを入力してください");
+			return;
 		}
-		// 作成完了後にリロードする
-		window.location.reload();
+		
+		createMutation.mutate({
+			title: newTodo,
+			completed: false
+		}, {
+			onSuccess: refreshTodos
+		});
 	};
 
 	const handleDelete = async (todoId: string) => {
-		const formData = new FormData();
-		formData.append("id", todoId);
-		await deleteTodo(todoId);
-		window.location.reload();
+		deleteMutation.mutate({ id: todoId }, {
+			onSuccess: refreshTodos
+		});
 	};
 
 	return (
@@ -49,12 +99,13 @@ export default function TodosPageClient(props: {
 				<button
 					className="bg-blue-500 text-white px-3 py-1 rounded-md"
 					type="submit"
+					disabled={createMutation.isLoading}
 				>
-					Add
+					{createMutation.isLoading ? "追加中..." : "追加"}
 				</button>
 			</form>
 			<ul>
-				{props.initialTodos?.map((todo: any) => (
+				{todos?.map((todo: any) => (
 					<div
 						key={todo.id}
 						className="border border-gray-300 p-3 m-3 rounded-md"
@@ -64,14 +115,18 @@ export default function TodosPageClient(props: {
 								type="checkbox"
 								checked={todo.completed}
 								onChange={(e) => handleCheck(todo.id, e.target.checked)}
+								disabled={updateMutation.isLoading}
 							/>
 							<span className="m-3">{todo.title}</span>
 							<button
 								type={"button"}
 								className="ml-auto bg-red-500 text-white px-3 py-1 rounded-md"
 								onClick={() => handleDelete(todo.id)}
+								disabled={deleteMutation.isLoading}
 							>
-								Delete
+								{deleteMutation.isLoading && deleteMutation.variables?.id === todo.id 
+									? "削除中..." 
+									: "削除"}
 							</button>
 						</div>
 					</div>
