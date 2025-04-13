@@ -1,8 +1,7 @@
 import Header from "@/app/_components/Header";
-import { nextAuthOptions } from "@/app/_utils/next-auth-options";
+import { auth } from "@/auth";
 import NextAuthProvider from "@/app/providers";
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -18,7 +17,7 @@ export default async function RootLayout({
 }: {
 	children: React.ReactNode;
 }) {
-	const session = await getServerSession(nextAuthOptions);
+	const session = await auth();
 	return (
 		<html lang="en" className="dark">
 			<body className={`${inter.className} bg-gray-900 text-white min-h-screen`}>

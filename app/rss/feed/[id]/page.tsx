@@ -2,8 +2,8 @@
  * 特定のRSSフィードの記事一覧ページ
  */
 import { Suspense } from 'react';
-import { getServerSession } from 'next-auth';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
 import { serverClient } from '@/app/api/trpc/trpc-server';
@@ -13,8 +13,13 @@ import { prisma } from '@/prisma/prisma';
 export default async function FeedPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const feedId = params.id;
-  const session = await getServerSession(nextAuthOptions);
-  const isLoggedIn = !!session;
+  
+  // セッション確認
+  const session = await auth();
+
+  if (!session) {
+    redirect('/auth/signin');
+  }
 
   // フィードの情報を取得
   try {
@@ -40,7 +45,7 @@ export default async function FeedPage(props: { params: Promise<{ id: string }> 
     }
     
     // プライベートフィードの場合、アクセス権をチェック
-    if (feed.feedType === 'PRIVATE' && (!isLoggedIn || feed.userId !== session?.userId)) {
+    if (feed.feedType === 'PRIVATE' && feed.userId !== session?.user?.id) {
       return (
         <div className="container mx-auto px-4 py-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

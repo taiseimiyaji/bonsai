@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { trpc } from "@/app/trpc-client";
 import { toast } from "react-hot-toast";
+import { TodoStatus } from "@prisma/client";
+import TodoKanban from "./components/TodoKanban";
 
 export default function TodosPageClient(props: {
 	initialTodos: any;
@@ -171,62 +173,55 @@ export default function TodosPageClient(props: {
 		updateOrderMutation.mutate({ taskId, newOrder });
 	};
 
+	// タスク編集ハンドラ
+	const handleEdit = (todo: any) => {
+		// 編集機能の実装（モーダルを開くなど）
+		toast.info("編集機能は準備中です");
+	};
+
+	// 新しいタスク追加ハンドラ（ステータス指定）
+	const handleAddTask = (status: TodoStatus) => {
+		// ステータスを指定して新しいタスクを追加
+		toast.info(`${status}に新しいタスクを追加します（準備中）`);
+	};
+
 	return (
-		<div>
-			<form onSubmit={handleCreate}>
-				<input
-					type="text"
-					name="title"
-					value={newTodo}
-					onChange={(e) => setNewTodo(e.target.value)}
-					placeholder="Add new Todo"
-					className="border border-gray-300 p-3 m-3 rounded-md text-black"
-				/>
-				<button
-					className="bg-blue-500 text-white px-3 py-1 rounded-md"
-					type="submit"
-					disabled={createMutation.isLoading}
-				>
-					{createMutation.isLoading ? "追加中..." : "追加"}
-				</button>
-			</form>
-			<ul>
-				{todos?.map((todo: any) => (
-					<div
-						key={todo.id}
-						className="border border-gray-300 p-3 m-3 rounded-md"
+		<div className="container mx-auto p-4 max-w-6xl">
+			<h1 className="text-3xl font-bold mb-6 text-white">タスク管理</h1>
+			
+			{/* シンプルなTODO追加フォーム */}
+			<form onSubmit={handleCreate} className="mb-6 bg-gray-800 p-4 rounded-lg shadow-md">
+				<div className="flex items-center">
+					<input
+						type="text"
+						name="title"
+						value={newTodo}
+						onChange={(e) => setNewTodo(e.target.value)}
+						placeholder="新しいタスクを追加"
+						className="flex-grow p-2 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+					/>
+					<button
+						className="ml-3 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						type="submit"
+						disabled={createMutation.isLoading}
 					>
-						<div className="flex items-center">
-							<input
-								type="checkbox"
-								checked={todo.completed}
-								onChange={(e) => handleCheck(todo.id, e.target.checked)}
-								disabled={updateMutation.isLoading}
-							/>
-							<span className="m-3">{todo.title}</span>
-							<button
-								type={"button"}
-								className="ml-auto bg-red-500 text-white px-3 py-1 rounded-md"
-								onClick={() => handleDelete(todo.id)}
-								disabled={deleteMutation.isLoading}
-							>
-								{deleteMutation.isLoading && deleteMutation.variables?.id === todo.id 
-									? "削除中..." 
-									: "削除"}
-							</button>
-						</div>
-					</div>
-				))}
-			</ul>
-			<TodoKanban
-				todos={todos}
-				onToggleComplete={handleCheck}
-				onDelete={handleDelete}
-				onEdit={() => {}} // 仮
-				onStatusChange={handleStatusAndOrderChange}
-				onAddTask={handleAddTask}
-				onOrderChange={handleOrderChange}
-			/>
+						{createMutation.isLoading ? "追加中..." : "追加"}
+					</button>
+				</div>
+			</form>
+			
+			{/* カンバンボード表示 */}
+			<div className="mt-8">
+				<TodoKanban
+					todos={todos}
+					onToggleComplete={handleCheck}
+					onDelete={handleDelete}
+					onEdit={handleEdit}
+					onStatusChange={handleStatusAndOrderChange}
+					onAddTask={handleAddTask}
+					onOrderChange={handleOrderChange}
+				/>
+			</div>
 		</div>
 	);
 }

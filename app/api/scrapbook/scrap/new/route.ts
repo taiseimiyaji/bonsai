@@ -1,9 +1,8 @@
-import { NextResponse } from 'next/server';
-import {prisma} from "@/prisma/prisma";
-import { getServerSession } from 'next-auth/next';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
+import { prisma } from '@/prisma/prisma';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { title, scrapBookId, content, link, image, ogpData, categoryId } = body;
@@ -12,7 +11,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Title and ScrapBook ID are required' }, { status: 400 });
         }
 
-        const session = await getServerSession(nextAuthOptions);
+        const session = await auth();
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized Session' }, { status: 401 });

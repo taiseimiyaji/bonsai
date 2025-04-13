@@ -16,14 +16,14 @@ export const isAuthenticated = middleware(async ({ ctx, next }) => {
   // ユーザーのロールを確認（Prismaから直接取得）
   const { prisma } = await import('@/prisma/prisma');
   const user = await prisma.user.findUnique({
-    where: { id: ctx.session.userId as string },
+    where: { id: ctx.session.user.id },
     select: { role: true },
   });
   
   return next({
     ctx: {
       ...ctx,
-      userId: ctx.session.userId as string,
+      userId: ctx.session.user.id,
       isAdmin: user?.role === 'ADMIN', // 管理者かどうかをチェック
     },
   });
@@ -40,7 +40,7 @@ export const isAdmin = middleware(async ({ ctx, next }) => {
   // ユーザーのロールを確認（Prismaから直接取得）
   const { prisma } = await import('@/prisma/prisma');
   const user = await prisma.user.findUnique({
-    where: { id: ctx.session.userId as string },
+    where: { id: ctx.session.user.id },
     select: { role: true },
   });
 
@@ -54,7 +54,7 @@ export const isAdmin = middleware(async ({ ctx, next }) => {
   return next({
     ctx: {
       ...ctx,
-      userId: ctx.session.userId as string,
+      userId: ctx.session.user.id,
       isAdmin: true,
     },
   });

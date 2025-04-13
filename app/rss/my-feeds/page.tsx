@@ -2,8 +2,7 @@
  * ユーザーのRSSフィード管理ページ
  */
 import { Suspense } from 'react';
-import { getServerSession } from 'next-auth';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
+import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
@@ -12,12 +11,12 @@ import FeedList from '../_components/FeedList';
 import { serverClient } from '@/app/api/trpc/trpc-server';
 
 export default async function MyFeedsPage() {
-  // セッションを取得
-  const session = await getServerSession(nextAuthOptions);
+  // セッション確認
+  const session = await auth();
   
   // 未ログインの場合はログインページにリダイレクト
   if (!session) {
-    redirect('/login');
+    redirect('/auth/signin');
   }
   
   // ユーザーのフィードを取得して存在確認

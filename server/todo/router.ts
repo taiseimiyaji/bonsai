@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../index';
+import { router, protectedProcedure } from '../index';
 import {
   getTodos,
   getTodoById,
@@ -9,72 +9,73 @@ import {
   updateManyTodosStatus,
   deleteCompletedTodos,
   todoSchema,
-  updateTodoOrder
+  updateTodoOrderAndStatus
 } from './actions';
+import { TodoStatus } from '@prisma/client';
 
-// Todoルーターの定義
 export const todoRouter = router({
-  // 全てのTodoを取得
-  getAll: publicProcedure
-    .query(async () => {
-      return await getTodos();
+  getAll: protectedProcedure
+    .query(async ({ ctx }) => {
+      return await getTodos({ userId: ctx.session.user.id });
     }),
-  
-  // IDによる単一Todo取得
-  getById: publicProcedure
+
+  getById: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(async ({ input }) => {
-      return await getTodoById(input.id);
+    .query(async ({ input, ctx }) => {
+      return await getTodoById(input.id, ctx.session.user.id);
     }),
-  
-  // 新しいTodoを作成
-  create: publicProcedure
-    .input(todoSchema.omit({ id: true, createdAt: true, updatedAt: true }))
-    .mutation(async ({ input }) => {
-      return await createTodo(input);
+
+  create: protectedProcedure
+    .input(todoSchema.omit({ id: true, createdAt: true, updatedAt: true, userId: true, order: true, completed: true }))
+    .mutation(async ({ input, ctx }) => {
+      return await createTodo({ ...input, userId: ctx.session.user.id });
     }),
-  
-  // 既存のTodoを更新
-  update: publicProcedure
+
+  update: protectedProcedure
     .input(z.object({
       id: z.string(),
-      data: todoSchema.partial().omit({ id: true, createdAt: true, updatedAt: true })
+      data: todoSchema.partial().omit({ id: true, createdAt: true, updatedAt: true, userId: true, order: true, completed: true })
     }))
-    .mutation(async ({ input }) => {
-      return await updateTodo(input.id, input.data);
+    .mutation(async ({ input, ctx }) => {
+      return await updateTodo(input.id, input.data, ctx.session.user.id);
     }),
-  
-  // Todoを削除
-  delete: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
-      return await deleteTodo(input.id);
-    }),
-  
-  // 複数のTodoのステータスを一括更新
-  updateManyStatus: publicProcedure
-    .input(z.object({
-      ids: z.array(z.string()),
-      completed: z.boolean()
-    }))
-    .mutation(async ({ input }) => {
-      return await updateManyTodosStatus(input.ids, input.completed);
-    }),
-  
-  // 完了済みのTodoをすべて削除
-  deleteCompleted: publicProcedure
-    .mutation(async () => {
-      return await deleteCompletedTodos();
-    }),
-    
-  // Todoの順序を更新
-  updateOrder: publicProcedure
+
+  updateOrderAndStatus: protectedProcedure
     .input(z.object({
       taskId: z.string(),
-      newOrder: z.number(),
-      newParentId: z.string().nullable().optional()
+      newStatus: z.nativeEnum(TodoStatus),
+      prevOrder: z.number().nullable(),
+      nextOrder: z.number().nullable(),
+      newParentId: z.string().nullable().optional(),
     }))
-    .mutation(async ({ input }) => {
-      return await updateTodoOrder(input.taskId, input.newOrder, input.newParentId);
-    })
+    .mutation(async ({ input, ctx }) => {
+      return await updateTodoOrderAndStatus(
+        input.taskId,
+        ctx.session.user.id,
+        input.newStatus,
+        input.prevOrder,
+        input.nextOrder,
+        input.newParentId
+      );
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      return await deleteTodo(input.id, ctx.session.user.id);
+    }),
+
+  deleteCompleted: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      return await deleteCompletedTodos({ userId: ctx.session.user.id });
+    }),
+
+  updateManyStatus: protectedProcedure
+    .input(z.object({
+      ids: z.array(z.string()),
+      status: z.nativeEnum(TodoStatus),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return await updateManyTodosStatus(input.ids, input.status, ctx.session.user.id);
+    }),
 });

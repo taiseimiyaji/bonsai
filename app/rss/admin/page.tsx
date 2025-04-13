@@ -2,8 +2,7 @@
  * RSSリーダーの管理者ページ
  */
 import { Suspense } from 'react';
-import { getServerSession } from 'next-auth';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
+import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 
@@ -14,17 +13,16 @@ import AdminActions from './_components/AdminActions';
 import { serverClient } from '@/app/api/trpc/trpc-server';
 
 export default async function AdminPage() {
-  // セッションを取得
-  const session = await getServerSession(nextAuthOptions);
-  
-  // 未ログインの場合はログインページにリダイレクト
+  // セッション確認と管理者権限チェック
+  const session = await auth();
+
   if (!session) {
-    redirect('/login');
+    redirect('/auth/signin');
   }
   
   // ユーザーの権限を確認
   const user = await prisma.user.findUnique({
-    where: { id: session.userId as string },
+    where: { id: session.user?.id },
     select: { role: true },
   });
   

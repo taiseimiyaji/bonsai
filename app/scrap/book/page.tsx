@@ -1,14 +1,14 @@
 import ScrapBookCard from "@/app/scrap/_components/ScrapBookCard";
 import React from "react";
 import {trpcCaller} from "@/app/api/trpc/trpc-server";
-import {getServerSession} from "next-auth/next";
+import {auth} from "@/auth";
 import {redirect} from "next/navigation";
-import {nextAuthOptions} from "@/app/_utils/next-auth-options";
 
 export default async function ScrapBookList() {
-	const session = await getServerSession(nextAuthOptions);
-	if (!session?.user) {
-		redirect('/login');
+	const session = await auth();
+
+	if (!session) {
+		redirect('/auth/signin');
 	}
 	const scrapBooks = await trpcCaller(async (caller) => {
 		return caller.scrapBook.getScrapBooks();

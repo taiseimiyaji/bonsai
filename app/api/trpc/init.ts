@@ -1,24 +1,14 @@
 // app/lib/trpc.ts
 import { initTRPC } from '@trpc/server';
 import { ZodError } from 'zod';
-import { getServerSession, Session } from 'next-auth/next';
-import { getNextAuthOptions } from '@/app/_utils/next-auth-options';
-// import { headers } from 'next/headers';
-// import { cookies } from 'next/headers';
+import { auth } from "@/auth";
 
 interface CreateContextOptions {
     req?: Request;
 }
 
 export const createTRPCContext = async (opts: CreateContextOptions = {}) => {
-    let session: Session | null = null;
-
-    try {
-        const authOptions = getNextAuthOptions();
-        session = await getServerSession(authOptions);
-    } catch (error) {
-        console.error('Error getting session:', error);
-    }
+    const session = await auth();
 
     return {
         session,
@@ -42,3 +32,16 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const middleware = t.middleware;
 export const mergeRouters = t.mergeRouters;
+
+const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
+    if (!ctx.session || !ctx.session.user) {
+        throw new Error('UNAUTHORIZED');
+    }
+    return next({
+        ctx: {
+            session: { ...ctx.session, user: ctx.session.user },
+        },
+    });
+});
+
+export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
