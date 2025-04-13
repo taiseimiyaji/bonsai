@@ -1,24 +1,28 @@
 // app/lib/trpc.ts
 import { initTRPC } from '@trpc/server';
 import { ZodError } from 'zod';
-import { getServerSession } from 'next-auth/next';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
+import { getServerSession, Session } from 'next-auth/next';
+import { getNextAuthOptions } from '@/app/_utils/next-auth-options';
+// import { headers } from 'next/headers';
+// import { cookies } from 'next/headers';
 
 interface CreateContextOptions {
     req?: Request;
 }
 
 export const createTRPCContext = async (opts: CreateContextOptions = {}) => {
-    let session = null;
+    let session: Session | null = null;
 
     try {
-        // App Router環境では引数なしでgetServerSessionを呼び出す
-        session = await getServerSession(nextAuthOptions);
+        const authOptions = getNextAuthOptions();
+        session = await getServerSession(authOptions);
     } catch (error) {
         console.error('Error getting session:', error);
     }
 
-    return { session };
+    return {
+        session,
+    };
 };
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
@@ -28,9 +32,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
             data: {
                 ...shape.data,
                 zodError:
-                    error.code === 'BAD_REQUEST' && error.cause instanceof ZodError
-                        ? error.cause.flatten()
-                        : null,
+                    error.cause instanceof ZodError ? error.cause.flatten() : null,
             },
         };
     },

@@ -8,7 +8,8 @@ import {
   deleteTodo,
   updateManyTodosStatus,
   deleteCompletedTodos,
-  todoSchema
+  todoSchema,
+  updateTodoOrder
 } from './actions';
 
 // Todoルーターの定義
@@ -64,5 +65,16 @@ export const todoRouter = router({
   deleteCompleted: publicProcedure
     .mutation(async () => {
       return await deleteCompletedTodos();
+    }),
+    
+  // Todoの順序を更新
+  updateOrder: publicProcedure
+    .input(z.object({
+      taskId: z.string(),
+      newOrder: z.number(),
+      newParentId: z.string().nullable().optional()
+    }))
+    .mutation(async ({ input }) => {
+      return await updateTodoOrder(input.taskId, input.newOrder, input.newParentId);
     })
 });

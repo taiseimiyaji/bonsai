@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { trpc } from "@/app/trpc-client";
 import { toast } from "react-hot-toast";
 import TodoList from "./TodoList";
@@ -18,12 +18,30 @@ type TodosPageProps = {
 };
 
 export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
-  // 状態管理
+  // デフォルトはリスト表示
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  
+  // ローカルストレージからビューモードを取得（クライアントサイドのみ）
+  useEffect(() => {
+    // クライアントサイドでのみ実行
+    if (typeof window !== "undefined") {
+      const savedMode = localStorage.getItem("todoViewMode");
+      if (savedMode) {
+        setViewMode(savedMode as ViewMode);
+      }
+    }
+  }, []);
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<any | null>(null);
+  const [initialStatus, setInitialStatus] = useState<TodoStatus | null>(null);
   const [filters, setFilters] = useState<any>({});
   const [sort, setSort] = useState<any>({ field: "order", direction: "asc" });
+
+  // ビューモードが変更されたらローカルストレージに保存
+  useEffect(() => {
+    localStorage.setItem("todoViewMode", viewMode);
+  }, [viewMode]);
 
   // tRPCクエリとミューテーション
   const utils = trpc.useContext();
@@ -43,6 +61,7 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
     onSuccess: () => {
       toast.success("タスクを作成しました");
       setIsFormOpen(false);
+      setInitialStatus(null);
       utils.todo.getAll.invalidate();
     },
     onError: (error) => {
@@ -76,10 +95,13 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
   // タスク順序更新ミューテーション
   const updateOrderMutation = trpc.todo.updateOrder.useMutation({
     onSuccess: () => {
-      utils.todo.getAll.invalidate();
+      // 成功時にキャッシュを更新
+      utils.todo.getAll.invalidate({ filters, sort });
     },
     onError: (error) => {
       toast.error(`エラー: ${error.message}`);
+      // エラー時にキャッシュを再検証して元の状態に戻す
+      utils.todo.getAll.invalidate({ filters, sort });
     },
   });
 
@@ -103,8 +125,11 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
         data,
       });
     } else {
-      // 新規作成
-      createMutation.mutate(data);
+      // 新規作成（初期ステータスが設定されている場合はそれを使用）
+      createMutation.mutate({
+        ...data,
+        status: initialStatus || data.status,
+      });
     }
   };
 
@@ -123,30 +148,160 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
 
   // 完了状態の切り替え
   const handleToggleComplete = (id: string, completed: boolean) => {
+    // 現在のtodosの配列をコピー
+    const updatedTodos = [...todos];
+    
+    // 変更するタスクを見つける
+    const taskIndex = updatedTodos.findIndex(t => t.id === id);
+    if (taskIndex === -1) return;
+    
+    // タスクの完了状態を更新
+    updatedTodos[taskIndex].completed = completed;
+    
+    // 完了状態に変更された場合は、ステータスもDONEに設定
+    if (completed && updatedTodos[taskIndex].status !== "DONE") {
+      updatedTodos[taskIndex].status = "DONE";
+    }
+    // 未完了状態に変更された場合で、ステータスがDONEだった場合はTODOに戻す
+    else if (!completed && updatedTodos[taskIndex].status === "DONE") {
+      updatedTodos[taskIndex].status = "TODO";
+    }
+    
+    // UIを即時更新するために、データをローカルで更新
+    utils.todo.getAll.setData({ filters, sort }, { todos: updatedTodos });
+    
+    // サーバーに更新を送信
     updateMutation.mutate({
       id,
-      data: { completed },
+      data: { 
+        completed,
+        // 完了状態に応じてステータスも更新
+        status: completed ? "DONE" : updatedTodos[taskIndex].status === "DONE" ? "TODO" : updatedTodos[taskIndex].status
+      },
     });
   };
 
   // タスクの順序変更
   const handleOrderChange = (taskId: string, newOrder: number, newParentId?: string | null) => {
+    // 現在のtodosの配列をコピー
+    const updatedTodos = [...todos];
+    
+    // 移動するタスクを見つける
+    const taskIndex = updatedTodos.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) return;
+    
+    const taskToMove = updatedTodos[taskIndex];
+    const currentStatus = taskToMove.status;
+    
+    // 同じステータスのタスクを取得（親タスクでないもの）
+    const tasksWithSameStatus = updatedTodos.filter(
+      t => t.status === currentStatus && !t.parentId && t.id !== taskId
+    );
+    
+    // 挿入位置に基づいて順序を更新
+    const reorderedTasks = [
+      ...tasksWithSameStatus.slice(0, newOrder),
+      taskToMove,
+      ...tasksWithSameStatus.slice(newOrder)
+    ];
+    
+    // 順序を更新
+    reorderedTasks.forEach((todo, index) => {
+      const todoIndex = updatedTodos.findIndex(t => t.id === todo.id);
+      if (todoIndex !== -1) {
+        updatedTodos[todoIndex].order = index;
+      }
+    });
+    
+    // UIを即時更新するために、データをローカルで更新
+    utils.todo.getAll.setData({ filters, sort }, { todos: updatedTodos });
+    
+    // サーバーに更新を送信
     updateOrderMutation.mutate({
       taskId,
       newOrder,
       newParentId,
+    }, {
+      // エラー時のみロールバック
+      onError: (err) => {
+        // エラー時には元のデータを再取得
+        utils.todo.getAll.invalidate({ filters, sort });
+        toast.error(`エラー: ${err.message}`);
+      }
     });
   };
 
   // タスクのステータス変更（カンバン表示用）
-  const handleStatusChange = (id: string, status: TodoStatus) => {
+  const handleStatusChange = (id: string, status: TodoStatus, destinationIndex: number) => {
+    // 現在のtodosの配列をコピー
+    const updatedTodos = [...todos];
+    
+    // 変更するタスクを見つける
+    const taskIndex = updatedTodos.findIndex(t => t.id === id);
+    if (taskIndex === -1) return;
+    
+    const taskToMove = updatedTodos[taskIndex];
+    const previousStatus = taskToMove.status;
+    
+    // タスクのステータスを更新
+    taskToMove.status = status;
+    
+    // DONEに変更された場合はcompletedもtrueに設定
+    if (status === "DONE") {
+      taskToMove.completed = true;
+    }
+    
+    // 移動先の同じステータスのタスクを取得（親タスクでないもの）
+    const tasksWithDestStatus = updatedTodos.filter(
+      t => t.status === status && !t.parentId && t.id !== id
+    );
+    
+    // 挿入位置に基づいて新しいorderを計算
+    let newOrder = 0;
+    
+    if (tasksWithDestStatus.length === 0) {
+      // 移動先に他のタスクがない場合は0
+      newOrder = 0;
+    } else if (destinationIndex >= tasksWithDestStatus.length) {
+      // 最後に挿入する場合は、最後のタスクのorder + 1
+      newOrder = Math.max(...tasksWithDestStatus.map(t => t.order)) + 1;
+    } else {
+      // 間に挿入する場合
+      // 挿入位置のタスクのorderを取得
+      const orderAtDestination = tasksWithDestStatus[destinationIndex].order;
+      
+      if (destinationIndex > 0) {
+        // 前のタスクのorderがある場合
+        const prevOrder = tasksWithDestStatus[destinationIndex - 1].order;
+        // 前後のタスクの間に挿入
+        newOrder = prevOrder + (orderAtDestination - prevOrder) / 2;
+      } else {
+        // 先頭に挿入する場合
+        newOrder = orderAtDestination / 2;
+      }
+    }
+    
+    // タスクのorderを更新
+    taskToMove.order = newOrder;
+    
+    // UIを即時更新するために、データをローカルで更新
+    utils.todo.getAll.setData({ filters, sort }, { todos: updatedTodos });
+    
+    // サーバーに更新を送信
     updateMutation.mutate({
       id,
       data: { 
         status,
-        // ステータスがDONEに変更された場合は、completedもtrueに設定
-        completed: status === "DONE"
+        completed: status === "DONE",
+        order: newOrder
       },
+    }, {
+      // エラー時のみロールバック
+      onError: (err) => {
+        // エラー時には元のデータを再取得
+        utils.todo.getAll.invalidate({ filters, sort });
+        toast.error(`エラー: ${err.message}`);
+      }
     });
   };
 
@@ -167,6 +322,13 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
     setSort(newSort);
   };
 
+  // カンバン表示で新しいタスクを追加
+  const handleAddTaskWithStatus = (status: TodoStatus) => {
+    setInitialStatus(status);
+    setEditingTodo(null);
+    setIsFormOpen(true);
+  };
+
   return (
     <div className="container mx-auto p-4 bg-gray-900">
       {/* ヘッダー */}
@@ -184,7 +346,12 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
-              リスト
+              <span className="flex items-center">
+                <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                リスト
+              </span>
             </button>
             <button
               onClick={() => setViewMode("kanban")}
@@ -194,7 +361,12 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
-              カンバン
+              <span className="flex items-center">
+                <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2" />
+                </svg>
+                カンバン
+              </span>
             </button>
             <button
               onClick={() => setViewMode("category")}
@@ -204,7 +376,12 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
-              カテゴリ
+              <span className="flex items-center">
+                <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                カテゴリ
+              </span>
             </button>
           </div>
           
@@ -212,6 +389,7 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
           <button
             onClick={() => {
               setEditingTodo(null);
+              setInitialStatus(null);
               setIsFormOpen(!isFormOpen);
             }}
             className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
@@ -233,13 +411,19 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
         <div className="mb-6 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-md">
           <h2 className="mb-4 text-xl font-semibold text-white">
             {editingTodo ? "タスクを編集" : "新規タスク"}
+            {initialStatus && !editingTodo && (
+              <span className="ml-2 text-sm text-gray-400">
+                ({initialStatus === "TODO" ? "未着手" : initialStatus === "IN_PROGRESS" ? "進行中" : "完了"}に追加)
+              </span>
+            )}
           </h2>
           <TodoForm
-            initialData={editingTodo}
+            initialData={editingTodo ? editingTodo : initialStatus ? { status: initialStatus } : undefined}
             onSubmit={handleSubmit}
             onCancel={() => {
               setIsFormOpen(false);
               setEditingTodo(null);
+              setInitialStatus(null);
             }}
           />
         </div>
@@ -282,6 +466,8 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
               onDelete={handleDelete}
               onEdit={handleEdit}
               onStatusChange={handleStatusChange}
+              onAddTask={handleAddTaskWithStatus}
+              onOrderChange={handleOrderChange}
             />
           )}
 

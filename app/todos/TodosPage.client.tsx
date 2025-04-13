@@ -47,6 +47,72 @@ export default function TodosPageClient(props: {
 		}
 	});
 	
+	const updateOrderMutation = trpc.todo.updateOrder.useMutation({
+		onMutate: async (newData) => {
+			// 既存のクエリをキャンセル
+			await utils.todo.getAll.cancel();
+			// キャッシュの現在の値を取得
+			const previousTodos = utils.todo.getAll.getData();
+
+			if (previousTodos) {
+				// ローカル状態を更新
+				const updatedTodos = previousTodos.todos.map(todo => 
+					todo.id === newData.taskId ? { ...todo, order: newData.newOrder } : todo
+				);
+				
+				// キャッシュとローカルステートを楽観的に更新
+				utils.todo.getAll.setData(undefined, { todos: updatedTodos });
+				setTodos(updatedTodos); 
+			}
+
+			// 前の状態を返す（エラー時のロールバック用）
+			return { previousTodos };
+		},
+		onError: (err, newData, context) => {
+			// エラーが発生した場合、前の状態にロールバック
+			if (context?.previousTodos) {
+				utils.todo.getAll.setData(undefined, context.previousTodos);
+				setTodos(context.previousTodos.todos);
+			}
+			toast.error(`順序更新エラー: ${err.message}`);
+		},
+		onSettled: () => {
+			// サーバーとの同期のためキャッシュを無効化
+			utils.todo.getAll.invalidate();
+		},
+	});
+
+	// ステータス変更用のミューテーション
+	const updateStatusMutation = trpc.todo.update.useMutation({
+		onMutate: async (newData) => {
+			await utils.todo.getAll.cancel();
+			const previousTodos = utils.todo.getAll.getData();
+
+			if (previousTodos) {
+				const updatedTodos = previousTodos.todos.map(todo =>
+					todo.id === newData.id ? { 
+						...todo, 
+						status: newData.data.status as TodoStatus, // ステータスを更新
+						order: newData.data.order // 順序も更新
+					} : todo
+				);
+				utils.todo.getAll.setData(undefined, { todos: updatedTodos });
+				setTodos(updatedTodos);
+			}
+			return { previousTodos };
+		},
+		onError: (err, newData, context) => {
+			if (context?.previousTodos) {
+				utils.todo.getAll.setData(undefined, context.previousTodos);
+				setTodos(context.previousTodos.todos);
+			}
+			toast.error(`ステータス更新エラー: ${err.message}`);
+		},
+		onSettled: () => {
+			utils.todo.getAll.invalidate();
+		},
+	});
+
 	// データ更新後にtodosを更新
 	const refreshTodos = async () => {
 		const result = await utils.todo.getAll.fetch();
@@ -83,6 +149,26 @@ export default function TodosPageClient(props: {
 		deleteMutation.mutate({ id: todoId }, {
 			onSuccess: refreshTodos
 		});
+	};
+
+	// ステータスと順序の変更ハンドラ
+	const handleStatusAndOrderChange = (
+		taskId: string, 
+		newStatus: TodoStatus, 
+		newOrder: number // カンバンから渡される新しいインデックス
+	) => {
+		// 実際のサーバー更新処理（順序も更新）
+		updateStatusMutation.mutate({
+			id: taskId,
+			data: {
+				status: newStatus,
+				order: newOrder // 新しい順序を渡す
+			}
+		});
+	};
+
+	const handleOrderChange = async (taskId: string, newOrder: number) => {
+		updateOrderMutation.mutate({ taskId, newOrder });
 	};
 
 	return (
@@ -132,6 +218,15 @@ export default function TodosPageClient(props: {
 					</div>
 				))}
 			</ul>
+			<TodoKanban
+				todos={todos}
+				onToggleComplete={handleCheck}
+				onDelete={handleDelete}
+				onEdit={() => {}} // 仮
+				onStatusChange={handleStatusAndOrderChange}
+				onAddTask={handleAddTask}
+				onOrderChange={handleOrderChange}
+			/>
 		</div>
 	);
 }
