@@ -187,16 +187,20 @@ KanbanCard.displayName = 'KanbanCard';
 // ドロップエリアをメモ化
 const KanbanColumn = memo(({ 
   status, 
+  title,
+  icon,
+  color,
   todos, 
-  columnConfig, 
   onAddTask,
   onToggleComplete,
   onEdit,
   onDelete
 }: {
   status: TodoStatus;
+  title: string;
+  icon: JSX.Element;
+  color: string;
   todos: any[];
-  columnConfig: any;
   onAddTask: (status: TodoStatus) => void;
   onToggleComplete: (id: string, completed: boolean) => void;
   onEdit: (todo: any) => void;
@@ -209,13 +213,13 @@ const KanbanColumn = memo(({
   return (
     <div 
       key={status} 
-      className={`rounded-lg bg-gray-800/90 ${columnConfig[status].color}`}
+      className={`rounded-lg bg-gray-800/90 ${color}`}
     >
       <div className="flex items-center justify-between border-b border-gray-700 p-3">
         <div className="flex items-center">
-          {columnConfig[status].icon}
+          {icon}
           <h3 className="ml-2 text-lg font-medium text-white">
-            {columnConfig[status].title}
+            {title}
             <span className="ml-2 rounded-full bg-gray-700 px-2 py-0.5 text-sm text-gray-300">
               {todos.length}
             </span>
@@ -275,62 +279,78 @@ export default function TodoKanban({
   onAddTask,
   onOrderChange, 
 }: TodoKanbanProps) {
-  // ローカルでの状態管理
-  const [localTodos, setLocalTodos] = useState<any[]>([]);
-  
-  // propsのtodosが変更されたらローカル状態を更新
-  useEffect(() => {
-    // ディープコピーを作成して参照の問題を回避
-    setLocalTodos(JSON.parse(JSON.stringify(todos)));
+  // ステータスごとのTodoをメモ化
+  const todosByStatus = useMemo(() => {
+    return todos.reduce((acc, todo) => {
+      if (!acc[todo.status]) {
+        acc[todo.status] = [];
+      }
+      acc[todo.status].push(todo);
+      // orderでソート
+      acc[todo.status].sort((a: any, b: any) => a.order - b.order);
+      return acc;
+    }, {} as Record<TodoStatus, typeof todos>);
   }, [todos]);
 
-  // ステータスごとにタスクをグループ化（メモ化）
-  const currentTodosByStatus = useMemo(() => ({
-    TODO: localTodos.filter((todo) => todo.status === "TODO" && !todo.parentId)
-      .sort((a, b) => a.order - b.order),
-    IN_PROGRESS: localTodos.filter((todo) => todo.status === "IN_PROGRESS" && !todo.parentId)
-      .sort((a, b) => a.order - b.order),
-    DONE: localTodos.filter((todo) => todo.status === "DONE" && !todo.parentId)
-      .sort((a, b) => a.order - b.order),
-  }), [localTodos]);
+  const reorder = useCallback((list: any[], startIndex: number, endIndex: number) => {
+    const result = Array.from(list);
+    const [removed] = result.splice(startIndex, 1);
+    result.splice(endIndex, 0, removed);
+    return result;
+  }, []);
 
-  // ドラッグ&ドロップの処理（メモ化）
+  const calculateNewOrder = useCallback((beforeOrder: number | null, afterOrder: number | null): number => {
+    if (beforeOrder === null && afterOrder === null) return 0;
+    if (beforeOrder === null) return afterOrder! - 1024;
+    if (afterOrder === null) return beforeOrder + 1024;
+    return (beforeOrder + afterOrder) / 2;
+  }, []);
+
   const handleDragEnd = useCallback((result: any) => {
-    const { destination, source, draggableId } = result;
+    const { source, destination } = result;
+    if (!destination) return;
 
-    // ドロップ先がない場合は何もしない
-    if (!destination) {
-      return;
-    }
-
-    // 同じ列の同じ位置にドロップした場合は何もしない
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    // ドラッグしたタスクのID
-    const taskId = draggableId;
-    
-    // 新しいステータス
-    const newStatus = destination.droppableId as TodoStatus;
     const sourceStatus = source.droppableId as TodoStatus;
+    const destStatus = destination.droppableId as TodoStatus;
+    
+    const sourceList = [...(todosByStatus[sourceStatus] || [])];
+    const destList = sourceStatus === destStatus ? sourceList : [...(todosByStatus[destStatus] || [])];
 
-    // 異なる列（ステータス）に移動した場合
-    if (destination.droppableId !== source.droppableId) {
-      // ステータス変更を親コンポーネントに通知（挿入位置のインデックスも渡す）
-      onStatusChange(taskId, newStatus, destination.index);
-    } 
-    // 同じ列内での順序変更の場合
-    else if (onOrderChange) {
-      // 親コンポーネントに通知 (新しい順序インデックスを渡す)
-      onOrderChange(taskId, destination.index);
+    if (sourceStatus === destStatus) {
+      // 同じステータス内での並び替え
+      const items = reorder(sourceList, source.index, destination.index);
+      const updates = items.map((item: any, index: number) => ({
+        id: item.id,
+        order: index * 1024 // 十分な間隔を確保
+      }));
+      
+      updates.forEach(update => {
+        if (onOrderChange) {
+          onOrderChange(update.id, update.order);
+        }
+      });
+    } else {
+      // 異なるステータス間の移動
+      const [movedItem] = sourceList.splice(source.index, 1);
+      destList.splice(destination.index, 0, movedItem);
+      
+      // 新しい順序を計算
+      const beforeItem = destination.index > 0 ? destList[destination.index - 1] : null;
+      const afterItem = destination.index < destList.length - 1 ? destList[destination.index + 1] : null;
+      
+      const newOrder = calculateNewOrder(
+        beforeItem?.order ?? null,
+        afterItem?.order ?? null
+      );
+
+      // ステータスと順序の両方を更新
+      onStatusChange(movedItem.id, destStatus, destination.index);
+      if (onOrderChange) {
+        onOrderChange(movedItem.id, newOrder);
+      }
     }
-  }, [onStatusChange, onOrderChange]);
+  }, [todosByStatus, reorder, calculateNewOrder, onStatusChange, onOrderChange]);
 
-  // 新しいタスクを追加する処理（メモ化）
   const handleAddTask = useCallback((status: TodoStatus) => {
     if (onAddTask) {
       onAddTask(status);
@@ -340,16 +360,18 @@ export default function TodoKanban({
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {Object.entries(currentTodosByStatus).map(([status, statusTodos]) => (
+        {Object.entries(columnConfig).map(([status, config]) => (
           <KanbanColumn
             key={status}
             status={status as TodoStatus}
-            todos={statusTodos}
-            columnConfig={columnConfig}
-            onAddTask={handleAddTask}
+            title={config.title}
+            icon={config.icon}
+            color={config.color}
+            todos={todosByStatus[status as TodoStatus] || []}
             onToggleComplete={onToggleComplete}
-            onEdit={onEdit}
             onDelete={onDelete}
+            onEdit={onEdit}
+            onAddTask={handleAddTask}
           />
         ))}
       </div>

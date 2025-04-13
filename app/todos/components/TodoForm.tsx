@@ -65,10 +65,16 @@ export default function TodoForm({
     
     setIsLoading(true);
     
+    // dueDateの処理を改善
+    let processedDueDate = undefined;
+    if (dueDate) {
+      processedDueDate = dueDate instanceof Date ? dueDate : new Date(dueDate);
+    }
+    
     const data = {
       title,
       description: description || undefined,
-      dueDate,
+      dueDate: processedDueDate,
       priority,
       status,
       categoryId: categoryId || undefined,
