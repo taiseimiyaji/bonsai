@@ -1,9 +1,12 @@
 import GoogleProvider from "next-auth/providers/google";
+import type { NextAuthConfig } from "next-auth";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
+import type { Account, Profile } from "next-auth";
+import { prisma } from "@/prisma/prisma";
 
-import type { NextAuthOptions } from "next-auth";
-import {prisma} from "@/prisma/prisma";
-
-export const nextAuthOptions: NextAuthOptions = {
+// NextAuth.js v5用の設定
+export const nextAuthConfig: NextAuthConfig = {
 	debug: true,
 	session: { strategy: "jwt" },
 	providers: [
@@ -17,8 +20,15 @@ export const nextAuthOptions: NextAuthOptions = {
 		signIn: '/auth/signin',
 	},
 	callbacks: {
-		jwt: async ({ token, user, account, profile }) => {
-			console.log('JWT Callback - Input:', { token, user, account, profile });
+		jwt: async ({ 
+			token, 
+			user, 
+			account 
+		}: { 
+			token: JWT; 
+			user?: User; 
+			account?: Account | null; 
+		}) => {
 			if (user) {
 				token.userId = user.id;
 				token.role = (user as any).role;
@@ -26,12 +36,10 @@ export const nextAuthOptions: NextAuthOptions = {
 			if (account) {
 				token.accessToken = account.access_token;
 			}
-			console.log('JWT Callback - Output:', token);
 			return token;
 		},
-		session: ({ session, token }) => {
-			console.log('Session Callback - Input:', { session, token });
-			const result = {
+		session: ({ session, token }: { session: Session; token: JWT }) => {
+			return {
 				...session,
 				userId: token.userId,
 				user: {
@@ -40,27 +48,28 @@ export const nextAuthOptions: NextAuthOptions = {
 					role: token.role,
 				},
 			};
-			console.log('Session Callback - Output:', result);
-			return result;
 		},
-		signIn: async ({ user, account, profile }) => {
-			console.log('SignIn Callback - Start:', { user, account, profile });
+		signIn: async ({ 
+			user, 
+			account 
+		}: { 
+			user: User; 
+			account: Account | null; 
+			profile?: Profile; 
+		}) => {
 			try {
 				if (account?.provider === "google") {
-					const googleId = account.providerAccountId; 
-					console.log('Looking up user with googleId:', googleId);
+					const googleId = account.providerAccountId;
 					
 					let dbUser = await prisma.user.findUnique({
 						where: { googleId: googleId },
 					});
-					console.log('Existing user:', dbUser);
 
 					if (!dbUser) {
 						if (!user.email || !user.name || !googleId) {
 							console.error('Missing required user data:', { email: user.email, name: user.name, googleId });
 							return "/auth/error";
 						}
-						console.log('Creating new user:', { email: user.email, name: user.name, googleId });
 						try {
 							dbUser = await prisma.user.create({
 								data: {
@@ -70,7 +79,6 @@ export const nextAuthOptions: NextAuthOptions = {
 									image: user.image,
 								},
 							});
-							console.log('New user created:', dbUser);
 						} catch (createError) {
 							console.error('Error creating user:', createError);
 							return "/auth/error";
@@ -78,7 +86,6 @@ export const nextAuthOptions: NextAuthOptions = {
 					}
 
 					if(user.image && dbUser.image !== user.image) {
-						console.log('Updating user image:', { oldImage: dbUser.image, newImage: user.image });
 						await prisma.user.update({
 							where: { id: dbUser.id },
 							data: { image: user.image },
@@ -86,10 +93,8 @@ export const nextAuthOptions: NextAuthOptions = {
 					}
 
 					user.id = dbUser.id;
-					console.log('SignIn Callback - Success:', { userId: user.id });
 					return true;
 				}
-				console.log('SignIn Callback - Unsupported provider:', account?.provider);
 				return false;
 			} catch (error) {
 				console.error('SignIn Callback - Error:', error);
@@ -98,3 +103,7 @@ export const nextAuthOptions: NextAuthOptions = {
 		},
 	},
 };
+
+// 後方互換性のためのエクスポート
+export const getNextAuthOptions = () => nextAuthConfig;
+export const nextAuthOptions = nextAuthConfig;

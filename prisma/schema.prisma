@@ -24,12 +24,17 @@ model User {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   Todo          Todo[]
+  todoCategories TodoCategory[] // Todoカテゴリとの関連
   Scrap         Scrap[]
   ScrapBook     ScrapBook[]
   rssFeeds      RssFeed[]       @relation("UserRssFeeds")
   rssReadStatus RssReadStatus[] 
   readLater     ReadLater[]     // 後で読む機能の関連付け
   role          UserRole        @default(USER)
+  
+  // Auth.js用のリレーション
+  accounts      Account[]
+  sessions      Session[]
 }
 
 enum UserRole {
@@ -37,15 +42,51 @@ enum UserRole {
   ADMIN
 }
 
+// 優先度の列挙型
+enum TodoPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+// タスクのステータス列挙型
+enum TodoStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
 model Todo {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   title       String
   description String?
-  completed   Boolean  @default(false)
+  completed   Boolean      @default(false)
+  archived    Boolean      @default(false)  // アーカイブフラグ
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  user        User         @relation(fields: [userId], references: [id])
+  dueDate     DateTime?    // 期限日
+  priority    TodoPriority @default(MEDIUM) // 優先度
+  status      TodoStatus   @default(TODO)   // ステータス
+  order       Int          @default(0)      // 表示順序
+  categoryId  String?      // カテゴリID
+  category    TodoCategory? @relation(fields: [categoryId], references: [id])
+  parentId    String?      // 親タスクID（サブタスク用）
+  parent      Todo?        @relation("TodoToSubTasks", fields: [parentId], references: [id])
+  subTasks    Todo[]       @relation("TodoToSubTasks") // サブタスク
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// Todoカテゴリモデル
+model TodoCategory {
+  id        String   @id @default(uuid())
+  name      String
+  color     String   @default("#3B82F6") // デフォルトは青色
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  todos     Todo[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Scrap {
@@ -175,6 +216,42 @@ model ReadLater {
   @@index([userId])
   @@index([articleId])
   @@index([addedAt])
+}
+
+// Auth.jsのために必要なモデル
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 // 定期実行ジョブのログ

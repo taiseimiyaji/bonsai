@@ -1,10 +1,10 @@
 import Link from "next/link";
 import React from "react";
-import {getServerSession} from "next-auth/next";
+import { auth } from "@/auth";
 import { BookOpenIcon, CollectionIcon, PlusCircleIcon } from "@heroicons/react/outline";
 
 export default async function ScrapSubNavigation() {
-	const session = await getServerSession();
+	const session = await auth();
 	const isLoggedIn = session?.user;
 
 	return (

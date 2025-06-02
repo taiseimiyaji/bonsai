@@ -2,9 +2,10 @@
  * RSSリーダーのメインページ
  */
 import { Suspense } from 'react';
-import { getServerSession } from 'next-auth';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { prisma } from '@/prisma/prisma';
 
 import { serverClient } from '@/app/api/trpc/trpc-server';
 import RssArticleList from './_components/RssArticleList';
@@ -12,14 +13,17 @@ import AddFeedForm from './_components/AddFeedForm';
 import FeedList from './_components/FeedList';
 
 export default async function RssPage() {
-  const session = await getServerSession(nextAuthOptions);
-  const isLoggedIn = !!session;
+  const session = await auth();
+
+  if (!session) {
+    redirect('/auth/signin');
+  }
 
   // 管理者かどうかを確認
   let isAdmin = false;
-  if (isLoggedIn) {
+  if (session && session.user) {
     const user = await prisma.user.findUnique({
-      where: { id: session.userId as string },
+      where: { id: session.user.id },
       select: { role: true },
     });
     isAdmin = user?.role === 'ADMIN';
@@ -28,7 +32,7 @@ export default async function RssPage() {
   // フィードの存在確認
   let hasFeeds = false;
   try {
-    const feeds = isLoggedIn 
+    const feeds = session 
       ? await serverClient.rss.getUserFeeds()
       : await serverClient.rss.getPublicFeeds();
     hasFeeds = feeds.length > 0;
@@ -62,7 +66,7 @@ export default async function RssPage() {
                   情報ダッシュボード
                 </Link>
               </li>
-              {isLoggedIn && (
+              {session && (
                 <li>
                   <Link 
                     href="/rss/my-feeds" 
@@ -89,11 +93,11 @@ export default async function RssPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <h2 className="text-xl font-semibold mb-4">フィード一覧</h2>
             <Suspense fallback={<div>フィードを読み込み中...</div>}>
-              <FeedList isLoggedIn={isLoggedIn} />
+              <FeedList isLoggedIn={!!session} />
             </Suspense>
             
             {/* フィード追加フォーム（ログインユーザーのみ） */}
-            {isLoggedIn && (
+            {session && (
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium mb-2">新しいフィードを追加</h3>
                 <AddFeedForm />
@@ -108,11 +112,11 @@ export default async function RssPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
               <h2 className="text-xl font-semibold mb-4">フィードが登録されていません</h2>
               <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {isLoggedIn 
+                {session 
                   ? 'RSSフィードを追加して、最新の記事を閲覧しましょう。'
                   : '現在、公開フィードが登録されていません。管理者が公開フィードを追加するまでお待ちください。'}
               </p>
-              {isLoggedIn && (
+              {session && (
                 <div className="mt-4">
                   <h3 className="text-lg font-medium mb-2">フィードを追加</h3>
                   <AddFeedForm />
@@ -122,10 +126,10 @@ export default async function RssPage() {
           ) : (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
               <h2 className="text-xl font-semibold mb-4">
-                {isLoggedIn ? 'あなたのフィードの最新記事' : '公開フィードの最新記事'}
+                {session ? 'あなたのフィードの最新記事' : '公開フィードの最新記事'}
               </h2>
               <Suspense fallback={<div>記事を読み込み中...</div>}>
-                <RssArticleList isLoggedIn={isLoggedIn} />
+                <RssArticleList isLoggedIn={!!session} />
               </Suspense>
             </div>
           )}
@@ -134,6 +138,3 @@ export default async function RssPage() {
     </div>
   );
 }
-
-// Prismaクライアントのインポート
-import { prisma } from '@/prisma/prisma';

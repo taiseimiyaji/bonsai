@@ -26,7 +26,6 @@ export class RssFeedService {
   // RSSフィードを取得して解析する
   async fetchAndParseFeed(feed: RssFeed): Promise<Result<RssArticle[], RssFetchError>> {
     try {
-      console.log(`[DEBUG] フィード解析開始: title=${feed.title}, url=${feed.url}`);
       
       // URLの検証
       if (!feed.url) {
@@ -39,20 +38,15 @@ export class RssFeedService {
       
       // URLをトリムして余分な空白を削除
       const url = (feed.url as string).trim();
-      console.log(`[DEBUG] 解析URL: ${url}`);
-      
+
       try {
         // フィードを取得
-        console.log(`[DEBUG] パーサーでフィード取得開始`);
         const parsedFeed = await this.parser.parseURL(url);
-        console.log(`[DEBUG] パーサーでフィード取得完了: title=${parsedFeed.title}`);
-        
+
         if (!parsedFeed.items || parsedFeed.items.length === 0) {
-          console.log(`[DEBUG] フィードに記事がありません`);
           return { ok: true, value: [] };
         }
 
-        console.log(`[DEBUG] フィード記事数: ${parsedFeed.items.length}`);
 
         // 記事を作成
         const articles: RssArticle[] = parsedFeed.items.map(item => {
@@ -85,7 +79,6 @@ export class RssFeedService {
           );
         });
 
-        console.log(`[DEBUG] 記事オブジェクト作成完了: ${articles.length}件`);
         return { ok: true, value: articles };
       } catch (parseError) {
         console.error(`[DEBUG] フィード「${feed.title}」の解析エラー:`, parseError);

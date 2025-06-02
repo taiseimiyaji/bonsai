@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { MenuIcon, XIcon } from "@heroicons/react/outline";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 const Header = ({ session }: { session: Session | null }) => {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -73,6 +74,9 @@ const Header = ({ session }: { session: Session | null }) => {
 								/>
 							</li>
 							<li>
+								<ThemeToggle />
+							</li>
+							<li>
 								<button
 									type={"button"}
 									onClick={() => signOut()}
@@ -128,6 +132,12 @@ const Header = ({ session }: { session: Session | null }) => {
 									<Link href="/todos" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-800">
 										TODO
 									</Link>
+								</li>
+								<li>
+									<div className="flex items-center justify-between px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300">
+										<span>テーマ</span>
+										<ThemeToggle />
+									</div>
 								</li>
 								<li>
 									<button

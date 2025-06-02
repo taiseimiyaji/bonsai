@@ -65,6 +65,14 @@ export const getUserArticles = authenticatedProcedure
     readFilter: z.enum(['all', 'read', 'unread']).optional().default('all')
   }))
   .query(async ({ ctx, input }) => {
+    // 認証チェック（二重チェック）
+    if (!ctx.userId) {
+      throw new TRPCError({ 
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーIDが取得できません' 
+      });
+    }
+    
     const result = await rssService.getLatestUserArticles(ctx.userId, input.limit);
     
     if (!result.ok) {
@@ -192,6 +200,14 @@ export const markAsRead = authenticatedProcedure
     articleId: z.string().min(1)
   }))
   .mutation(async ({ ctx, input }) => {
+    // 認証チェック（二重チェック）
+    if (!ctx.userId) {
+      throw new TRPCError({ 
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーIDが取得できません' 
+      });
+    }
+    
     const { prisma } = await import('@/prisma/prisma');
     
     // 記事が存在するか確認
@@ -237,6 +253,14 @@ export const getReadStatuses = authenticatedProcedure
     articleIds: z.array(z.string().min(1))
   }))
   .query(async ({ ctx, input }) => {
+    // 認証チェック（二重チェック）
+    if (!ctx.userId) {
+      throw new TRPCError({ 
+        code: 'UNAUTHORIZED',
+        message: 'ユーザーIDが取得できません' 
+      });
+    }
+    
     const { prisma } = await import('@/prisma/prisma');
     
     const readStatuses = await prisma.rssReadStatus.findMany({

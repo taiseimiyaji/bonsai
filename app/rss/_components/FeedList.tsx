@@ -4,15 +4,21 @@
 'use client';
 
 import { trpc } from '../../trpc-client';
+import { useSession } from 'next-auth/react';
 
 interface FeedListProps {
   isLoggedIn: boolean;
 }
 
 export default function FeedList({ isLoggedIn }: FeedListProps) {
+  // セッション情報を取得
+  const { data: session } = useSession();
+  
   // ログイン状態に応じて適切なクエリを使用
-  const feedsQuery = isLoggedIn
-    ? trpc.rss.getUserFeeds.useQuery()
+  const feedsQuery = isLoggedIn && session?.user
+    ? trpc.rss.getUserFeeds.useQuery(undefined, {
+        enabled: !!session?.user
+      })
     : trpc.rss.getPublicFeeds.useQuery();
   
   // 削除ミューテーション（ログインユーザーのみ）

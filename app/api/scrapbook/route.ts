@@ -1,24 +1,13 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
-import { IncomingMessage } from 'http';
+import { NextResponse, NextRequest } from 'next/server';
+import { auth } from '@/auth';
 import { prisma } from '@/prisma/prisma';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { title, description, image } = body;
-        // Convert Request to IncomingMessage with cookies
-        const headers = Object.fromEntries(request.headers.entries());
-        const cookies = Object.fromEntries(request.headers.get('cookie')?.split(';').map(cookie => cookie.trim().split('=')) ?? []);
-        const req: IncomingMessage & { cookies: Partial<{ [key: string]: string }> } = {
-            headers,
-            method: request.method,
-            url: request.url,
-            cookies,
-        } as IncomingMessage & { cookies: Partial<{ [key: string]: string }> };
 
-        const session = await getServerSession(nextAuthOptions)
+        const session = await auth();
 
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized Session' }, { status: 401 });

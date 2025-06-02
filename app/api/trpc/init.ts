@@ -1,24 +1,18 @@
 // app/lib/trpc.ts
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { ZodError } from 'zod';
-import { getServerSession } from 'next-auth/next';
-import { nextAuthOptions } from '@/app/_utils/next-auth-options';
+import { auth } from "@/auth";
 
 interface CreateContextOptions {
     req?: Request;
 }
 
 export const createTRPCContext = async (opts: CreateContextOptions = {}) => {
-    let session = null;
+    const session = await auth();
 
-    try {
-        // App Router環境では引数なしでgetServerSessionを呼び出す
-        session = await getServerSession(nextAuthOptions);
-    } catch (error) {
-        console.error('Error getting session:', error);
-    }
-
-    return { session };
+    return {
+        session,
+    };
 };
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
@@ -28,9 +22,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
             data: {
                 ...shape.data,
                 zodError:
-                    error.code === 'BAD_REQUEST' && error.cause instanceof ZodError
-                        ? error.cause.flatten()
-                        : null,
+                    error.cause instanceof ZodError ? error.cause.flatten() : null,
             },
         };
     },
@@ -40,3 +32,19 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const middleware = t.middleware;
 export const mergeRouters = t.mergeRouters;
+
+const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
+    if (!ctx.session || !ctx.session.user) {
+        throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'ログインが必要です',
+        });
+    }
+    return next({
+        ctx: {
+            session: { ...ctx.session, user: ctx.session.user },
+        },
+    });
+});
+
+export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);

@@ -1,13 +1,12 @@
 import { notFound } from 'next/navigation';
 import ScrapClient from './ScrapClient';
 import {trpcCaller} from "@/app/api/trpc/trpc-server";
-import {getServerSession} from "next-auth/next";
-import {nextAuthOptions} from "@/app/_utils/next-auth-options";
+import {auth} from "@/auth";
+import {redirect} from "next/navigation";
 import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
 
-export default async function ScrapBookPage(props: { params: Promise<{ bookId: string }> }) {
-    const params = await props.params;
-    const { bookId: bookId } = params;
+export default async function ScrapBookPage({params}: { params: Promise<{ bookId: string }> }) {
+    const { bookId } = await params;
 
     const scrapBook = await trpcCaller(async (caller) => {
         return caller.scrapBook.getScrapBookById({ id: bookId });
@@ -17,10 +16,13 @@ export default async function ScrapBookPage(props: { params: Promise<{ bookId: s
         return caller.scrap.getScraps({ scrapBookId: bookId });
     });
 
-    const session = await getServerSession(nextAuthOptions);
-    console.log(session);
+    const session = await auth();
+    
+    if (!session) {
+        redirect('/auth/signin');
+    }
 
-    const isOwner = session?.userId === scrapBook.user.id;
+    const isOwner = session.user?.id === scrapBook.user.id;
 
     if (!scrapsData) {
         // エラーハンドリングまたは404ページを表示
