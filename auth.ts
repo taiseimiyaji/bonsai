@@ -4,8 +4,10 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma/prisma";
 import type { Adapter } from "@auth/core/adapters";
 import type { Provider } from "@auth/core/providers";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User, Account } from "next-auth";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
   session: { strategy: "jwt" },
   providers: [
@@ -21,7 +23,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     // JWTにユーザーIDとロールを追加
-    async jwt({ token, user, account, profile }) {
+    async jwt({ 
+      token, 
+      user, 
+      account 
+    }: {
+      token: JWT;
+      user?: User;
+      account?: Account | null;
+    }) {
       if (user) { // サインイン時にユーザー情報が存在する場合
         token.userId = user.id; 
         // adapter経由だとuserにカスタムフィールド(role)が含まれない可能性があるためDBから取得
@@ -34,7 +44,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     // セッションにJWTの情報を反映
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (token.userId && session.user) {
         session.user.id = token.userId as string; // ユーザーIDをセッションに追加
       }
@@ -44,7 +54,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
     // サインイン処理: ユーザーが存在しない場合は作成、アイコン更新
-    async signIn({ user, account, profile }) {
+    async signIn({ 
+      user, 
+      account 
+    }: {
+      user: User;
+      account: Account | null;
+    }) {
       if (account?.provider === "google") {
         const googleId = account.providerAccountId;
         if (!googleId || !user.email || !user.name) {

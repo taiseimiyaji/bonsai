@@ -16,6 +16,7 @@ export const todoSchema = z.object({
   title: z.string().min(1, { message: 'タイトルは必須です' }),
   description: z.string().optional(),
   completed: z.boolean().default(false),
+  archived: z.boolean().default(false),
   userId: z.string(),
   dueDate: z.date().optional().nullable(),
   priority: todoPrioritySchema.default('MEDIUM'),
@@ -56,8 +57,8 @@ export async function getTodos(
   }
 ) {
   try {
-    // フィルタリング条件の構築
-    const where: any = { userId };
+    // フィルタリング条件の構築（デフォルトでアーカイブされていないタスクのみ）
+    const where: any = { userId, archived: false };
     
     if (filters) {
       if (filters.status) {
@@ -224,7 +225,17 @@ export async function updateTodo(id: string, userId: string, data: Partial<z.inf
     
     const todo = await prisma.todo.update({
       where: { id },
-      data,
+      data: {
+        title: data.title,
+        description: data.description,
+        completed: data.completed,
+        dueDate: data.dueDate,
+        priority: data.priority as TodoPriority | undefined,
+        status: data.status as TodoStatus | undefined,
+        order: data.order,
+        categoryId: data.categoryId,
+        parentId: data.parentId,
+      },
       include: {
         category: true,
         subTasks: true,
@@ -298,59 +309,42 @@ export async function updateTaskOrder(userId: string, taskId: string, newOrder: 
       throw new Error('タスクが見つかりませんでした');
     }
     
+    let updatedTask;
+    
     // 親タスクが変更される場合
     if (newParentId !== undefined && newParentId !== task.parentId) {
-      await prisma.todo.update({
+      updatedTask = await prisma.todo.update({
         where: { id: taskId },
         data: {
           parentId: newParentId,
           order: newOrder,
         },
+        include: {
+          category: true,
+          subTasks: true,
+        },
       });
-      
-      // 元の親の下にあるタスクの順序を再整列
-      await reorderTasks(userId, task.parentId);
-      
-      // 新しい親の下にあるタスクの順序を再整列
-      if (newParentId !== null) {
-        await reorderTasks(userId, newParentId);
-      }
     } 
     // 同じ親の中での順序変更
     else {
-      await prisma.todo.update({
+      updatedTask = await prisma.todo.update({
         where: { id: taskId },
         data: { order: newOrder },
+        include: {
+          category: true,
+          subTasks: true,
+        },
       });
-      
-      // 同じ親の下にあるタスクの順序を再整列
-      await reorderTasks(userId, task.parentId);
     }
     
-    return { success: true };
+    // 更新されたタスクを返す
+    return { todo: updatedTask };
   } catch (error) {
     console.error('タスクの順序更新に失敗しました:', error);
     throw new Error('タスクの順序更新に失敗しました');
   }
 }
 
-// 同じ親を持つタスクの順序を連番で振り直す
-async function reorderTasks(userId: string, parentId: string | null) {
-  const tasks = await prisma.todo.findMany({
-    where: {
-      userId,
-      parentId,
-    },
-    orderBy: { order: 'asc' },
-  });
-  
-  for (let i = 0; i < tasks.length; i++) {
-    await prisma.todo.update({
-      where: { id: tasks[i].id },
-      data: { order: i },
-    });
-  }
-}
 
 // 複数のTodoを一括で完了/未完了に更新するアクション
 export async function updateManyTodosStatus(ids: string[], userId: string, completed: boolean) {
@@ -369,6 +363,108 @@ export async function updateManyTodosStatus(ids: string[], userId: string, compl
   } catch (error) {
     console.error('複数Todoのステータス更新に失敗しました:', error);
     throw new Error('複数Todoのステータス更新に失敗しました');
+  }
+}
+
+// 完了済みのTodoをアーカイブするアクション
+export async function archiveCompletedTodos(userId: string) {
+  try {
+    await prisma.todo.updateMany({
+      where: { 
+        completed: true,
+        userId,
+        archived: false
+      },
+      data: { 
+        archived: true 
+      },
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error('完了済みTodoのアーカイブに失敗しました:', error);
+    throw new Error('完了済みTodoのアーカイブに失敗しました');
+  }
+}
+
+// 単一のTodoをアーカイブするアクション
+export async function archiveTodo(id: string, userId: string) {
+  try {
+    const existingTodo = await prisma.todo.findFirst({
+      where: { 
+        id,
+        userId 
+      },
+    });
+    
+    if (!existingTodo) {
+      throw new Error('アーカイブ対象のTodoが見つかりませんでした');
+    }
+    
+    const todo = await prisma.todo.update({
+      where: { id },
+      data: { archived: true },
+      include: {
+        category: true,
+        subTasks: true,
+      },
+    });
+    
+    return { todo };
+  } catch (error) {
+    console.error(`ID: ${id} のTodoのアーカイブに失敗しました:`, error);
+    throw new Error('Todoのアーカイブに失敗しました');
+  }
+}
+
+// アーカイブされたTodoを復元するアクション
+export async function unarchiveTodo(id: string, userId: string) {
+  try {
+    const existingTodo = await prisma.todo.findFirst({
+      where: { 
+        id,
+        userId 
+      },
+    });
+    
+    if (!existingTodo) {
+      throw new Error('復元対象のTodoが見つかりませんでした');
+    }
+    
+    const todo = await prisma.todo.update({
+      where: { id },
+      data: { archived: false },
+      include: {
+        category: true,
+        subTasks: true,
+      },
+    });
+    
+    return { todo };
+  } catch (error) {
+    console.error(`ID: ${id} のTodoの復元に失敗しました:`, error);
+    throw new Error('Todoの復元に失敗しました');
+  }
+}
+
+// アーカイブされたTodoを取得するアクション
+export async function getArchivedTodos(userId: string) {
+  try {
+    const todos = await prisma.todo.findMany({
+      where: { userId, archived: true },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        category: true,
+        subTasks: {
+          orderBy: { order: 'asc' },
+        },
+      },
+    });
+    
+    return { todos };
+  } catch (error) {
+    console.error('アーカイブ済みTodoの取得に失敗しました:', error);
+    throw new Error('アーカイブ済みTodoの取得に失敗しました');
   }
 }
 

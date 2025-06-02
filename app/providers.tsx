@@ -8,12 +8,30 @@ import { trpc } from './trpc-client';
 import { httpBatchLink } from '@trpc/client';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-	const [queryClient] = React.useState(() => new QueryClient());
+	const [queryClient] = React.useState(() => new QueryClient({
+		defaultOptions: {
+			queries: {
+				// 楽観的更新を維持するため、自動refetchを無効化
+				refetchOnWindowFocus: false,
+				refetchOnMount: false,
+				refetchOnReconnect: false,
+				// staleTimeを長めに設定（5分）
+				staleTime: 5 * 60 * 1000,
+			},
+		},
+	}));
 	const [trpcClient] = React.useState(() =>
 		trpc.createClient({
 			links: [
 				httpBatchLink({
 					url: '/api/trpc',
+					// 重要: クッキーを含めて認証情報を送信
+					fetch(url, options) {
+						return fetch(url, {
+							...options,
+							credentials: 'include',
+						});
+					},
 				}),
 			],
 		})

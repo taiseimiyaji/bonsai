@@ -2,24 +2,24 @@
  * RSS機能の型定義
  */
 import { inferAsyncReturnType } from '@trpc/server';
-import { CreateNextContextOptions } from '@trpc/server/adapters/next';
+import { createTRPCContext } from "@/app/api/trpc/init";
 
-// コンテキストの型拡張
-declare module '@trpc/server' {
-  interface CreateContextOptions {
-    // 既存のプロパティに加えて
-    userId?: string;
-    isAdmin?: boolean;
-  }
+// 基本のコンテキスト型
+export type Context = inferAsyncReturnType<typeof createTRPCContext>;
+
+// 認証済みコンテキストの型
+export interface AuthenticatedContext extends Context {
+  userId: string;
+  isAdmin: boolean;
 }
 
 // セッションの型
 export interface Session {
   user: {
+    id: string;
     name: string;
     email: string;
     image?: string;
   };
-  userId: string;
   expires: string;
 }

@@ -16,19 +16,36 @@ import { TodoStatus } from '@prisma/client';
 export const todoRouter = router({
   getAll: protectedProcedure
     .query(async ({ ctx }) => {
-      return await getTodos({ userId: ctx.session.user.id });
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
+      return await getTodos({ userId });
     }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      return await getTodoById(input.id, ctx.session.user.id);
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
+      return await getTodoById(input.id, userId);
     }),
 
   create: protectedProcedure
     .input(todoSchema.omit({ id: true, createdAt: true, updatedAt: true, userId: true, order: true, completed: true }))
     .mutation(async ({ input, ctx }) => {
-      return await createTodo({ ...input, userId: ctx.session.user.id });
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
+      return await createTodo({ 
+        ...input, 
+        userId, 
+        completed: false, 
+        order: 0 
+      });
     }),
 
   update: protectedProcedure
@@ -37,7 +54,11 @@ export const todoRouter = router({
       data: todoSchema.partial().omit({ id: true, createdAt: true, updatedAt: true, userId: true, order: true, completed: true })
     }))
     .mutation(async ({ input, ctx }) => {
-      return await updateTodo(input.id, input.data, ctx.session.user.id);
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
+      return await updateTodo(input.id, input.data, userId);
     }),
 
   updateOrderAndStatus: protectedProcedure
@@ -49,9 +70,13 @@ export const todoRouter = router({
       newParentId: z.string().nullable().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
       return await updateTodoOrderAndStatus(
         input.taskId,
-        ctx.session.user.id,
+        userId,
         input.newStatus,
         input.prevOrder,
         input.nextOrder,
@@ -62,12 +87,20 @@ export const todoRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      return await deleteTodo(input.id, ctx.session.user.id);
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
+      return await deleteTodo(input.id, userId);
     }),
 
   deleteCompleted: protectedProcedure
     .mutation(async ({ ctx }) => {
-      return await deleteCompletedTodos({ userId: ctx.session.user.id });
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
+      return await deleteCompletedTodos({ userId });
     }),
 
   updateManyStatus: protectedProcedure
@@ -76,6 +109,10 @@ export const todoRouter = router({
       status: z.nativeEnum(TodoStatus),
     }))
     .mutation(async ({ input, ctx }) => {
-      return await updateManyTodosStatus(input.ids, input.status, ctx.session.user.id);
+      const userId = ctx.session.user.id;
+      if (!userId) {
+        throw new Error('ユーザーIDが取得できませんでした');
+      }
+      return await updateManyTodosStatus(input.ids, input.status, userId);
     }),
 });

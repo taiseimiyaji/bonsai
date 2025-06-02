@@ -64,23 +64,23 @@ export default function TodoFilter({
   };
 
   return (
-    <div className="mb-6 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-md">
+    <div className="mb-4 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-md sm:mb-6 sm:p-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-white">フィルター・ソート</h3>
+        <h3 className="text-base font-medium text-white sm:text-lg">フィルター・ソート</h3>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-blue-400 hover:text-blue-300"
+          className="min-h-[44px] min-w-[44px] rounded-md px-3 py-2 text-base text-blue-400 hover:bg-gray-700 hover:text-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:min-h-0 sm:min-w-0 sm:text-sm"
         >
           {isExpanded ? "閉じる" : "開く"}
         </button>
       </div>
 
       {isExpanded && (
-        <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap gap-4">
+        <div className="mt-4 space-y-6 sm:space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* 検索キーワード */}
-            <div className="w-full md:w-auto md:flex-1">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-200">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label htmlFor="search" className="block text-base font-medium text-gray-200 sm:text-sm">
                 キーワード検索
               </label>
               <input
@@ -91,13 +91,13 @@ export default function TodoFilter({
                   setFilters({ ...filters, search: e.target.value || undefined })
                 }
                 placeholder="タイトルまたは説明で検索"
-                className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
               />
             </div>
 
             {/* ステータスフィルター */}
-            <div className="w-full md:w-auto md:flex-1">
-              <label htmlFor="status" className="block text-sm font-medium text-gray-200">
+            <div>
+              <label htmlFor="status" className="block text-base font-medium text-gray-200 sm:text-sm">
                 ステータス
               </label>
               <select
@@ -109,7 +109,7 @@ export default function TodoFilter({
                     status: e.target.value ? (e.target.value as TodoStatus) : undefined,
                   })
                 }
-                className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
               >
                 <option value="">すべて</option>
                 <option value="TODO">未着手</option>
@@ -119,8 +119,8 @@ export default function TodoFilter({
             </div>
 
             {/* 優先度フィルター */}
-            <div className="w-full md:w-auto md:flex-1">
-              <label htmlFor="priority" className="block text-sm font-medium text-gray-200">
+            <div>
+              <label htmlFor="priority" className="block text-base font-medium text-gray-200 sm:text-sm">
                 優先度
               </label>
               <select
@@ -132,7 +132,7 @@ export default function TodoFilter({
                     priority: e.target.value ? (e.target.value as TodoPriority) : undefined,
                   })
                 }
-                className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
               >
                 <option value="">すべて</option>
                 <option value="HIGH">高</option>
@@ -142,8 +142,8 @@ export default function TodoFilter({
             </div>
 
             {/* カテゴリフィルター */}
-            <div className="w-full md:w-auto md:flex-1">
-              <label htmlFor="category" className="block text-sm font-medium text-gray-200">
+            <div>
+              <label htmlFor="category" className="block text-base font-medium text-gray-200 sm:text-sm">
                 カテゴリ
               </label>
               <select
@@ -155,7 +155,7 @@ export default function TodoFilter({
                     categoryId: e.target.value || undefined,
                   })
                 }
-                className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
               >
                 <option value="">すべて</option>
                 {categories.map((category: any) => (
@@ -167,11 +167,11 @@ export default function TodoFilter({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* 期限日フィルター */}
-            <div className="w-full md:w-auto md:flex-1">
-              <label className="block text-sm font-medium text-gray-200">期限日</label>
-              <div className="mt-1 flex items-center space-x-2">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="block text-base font-medium text-gray-200 sm:text-sm">期限日</label>
+              <div className="mt-2 flex flex-col space-y-3 sm:mt-1 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
                 <DatePicker
                   selected={filters.dueDate?.from}
                   onChange={(date) =>
@@ -185,11 +185,12 @@ export default function TodoFilter({
                   }
                   locale="ja"
                   dateFormat="yyyy/MM/dd"
-                  className="block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:px-2 sm:py-2 sm:text-sm"
                   placeholderText="開始日"
                   isClearable
                 />
-                <span>〜</span>
+                <span className="text-center text-gray-400 sm:hidden">〜</span>
+                <span className="hidden text-gray-400 sm:block">〜</span>
                 <DatePicker
                   selected={filters.dueDate?.to}
                   onChange={(date) =>
@@ -203,7 +204,7 @@ export default function TodoFilter({
                   }
                   locale="ja"
                   dateFormat="yyyy/MM/dd"
-                  className="block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:px-2 sm:py-2 sm:text-sm"
                   placeholderText="終了日"
                   isClearable
                 />
@@ -211,8 +212,8 @@ export default function TodoFilter({
             </div>
 
             {/* 階層フィルター */}
-            <div className="w-full md:w-auto md:flex-1">
-              <label htmlFor="hierarchy" className="block text-sm font-medium text-gray-200">
+            <div>
+              <label htmlFor="hierarchy" className="block text-base font-medium text-gray-200 sm:text-sm">
                 階層
               </label>
               <select
@@ -225,7 +226,7 @@ export default function TodoFilter({
                     parentId: value === "top" ? null : value === "sub" ? "any" : undefined,
                   });
                 }}
-                className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
               >
                 <option value="">すべて</option>
                 <option value="top">最上位タスクのみ</option>
@@ -234,11 +235,11 @@ export default function TodoFilter({
             </div>
 
             {/* ソート */}
-            <div className="w-full md:w-auto md:flex-1">
-              <label htmlFor="sortField" className="block text-sm font-medium text-gray-200">
+            <div>
+              <label htmlFor="sortField" className="block text-base font-medium text-gray-200 sm:text-sm">
                 並び替え
               </label>
-              <div className="mt-1 flex space-x-2">
+              <div className="mt-2 flex flex-col space-y-3 sm:mt-1 sm:flex-row sm:space-x-2 sm:space-y-0">
                 <select
                   id="sortField"
                   value={sort.field}
@@ -248,7 +249,7 @@ export default function TodoFilter({
                       field: e.target.value as SortState["field"],
                     })
                   }
-                  className="block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:px-2 sm:py-2 sm:text-sm"
                 >
                   <option value="order">表示順</option>
                   <option value="dueDate">期限日</option>
@@ -264,7 +265,7 @@ export default function TodoFilter({
                       direction: e.target.value as "asc" | "desc",
                     })
                   }
-                  className="block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:px-2 sm:py-2 sm:text-sm"
                 >
                   <option value="asc">昇順</option>
                   <option value="desc">降順</option>
@@ -273,10 +274,10 @@ export default function TodoFilter({
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-center sm:justify-end">
             <button
               onClick={resetFilters}
-              className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
+              className="min-h-[44px] w-full rounded-md bg-gray-700 px-4 py-3 text-base font-medium text-gray-200 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:w-auto sm:text-sm"
             >
               フィルターをリセット
             </button>

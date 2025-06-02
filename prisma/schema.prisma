@@ -61,6 +61,7 @@ model Todo {
   title       String
   description String?
   completed   Boolean      @default(false)
+  archived    Boolean      @default(false)  // アーカイブフラグ
   userId      String
   user        User         @relation(fields: [userId], references: [id])
   dueDate     DateTime?    // 期限日

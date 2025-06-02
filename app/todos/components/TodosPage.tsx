@@ -9,6 +9,7 @@ import TodoForm from "./TodoForm";
 import TodoFilter from "./TodoFilter";
 import TodoCategory from "./TodoCategory";
 import { TodoPriority, TodoStatus } from "@prisma/client";
+import { useOptimisticTodos } from "../hooks/useOptimisticTodos";
 
 type ViewMode = "list" | "kanban" | "category";
 
@@ -330,89 +331,91 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
   };
 
   return (
-    <div className="container mx-auto p-4 bg-gray-900">
+    <div className="container mx-auto p-3 bg-gray-900 sm:p-4">
       {/* ヘッダー */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-white">TODOリスト</h1>
+      <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:mb-6 sm:flex-row sm:items-center">
+        <h1 className="text-xl font-bold text-white sm:text-2xl">TODOリスト</h1>
         
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:gap-2">
           {/* 表示モード切替 */}
-          <div className="flex rounded-md border border-gray-700 bg-gray-800">
+          <div className="grid grid-cols-3 rounded-md border border-gray-700 bg-gray-800 sm:flex">
             <button
               onClick={() => setViewMode("list")}
-              className={`px-4 py-2 ${
+              className={`min-h-[44px] px-3 py-2 text-sm ${
                 viewMode === "list"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:px-4`}
             >
-              <span className="flex items-center">
-                <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="flex items-center justify-center">
+                <svg className="mr-1 h-4 w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                 </svg>
-                リスト
+                <span className="hidden sm:inline">リスト</span>
               </span>
             </button>
             <button
               onClick={() => setViewMode("kanban")}
-              className={`px-4 py-2 ${
+              className={`min-h-[44px] px-3 py-2 text-sm ${
                 viewMode === "kanban"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:px-4`}
             >
-              <span className="flex items-center">
-                <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="flex items-center justify-center">
+                <svg className="mr-1 h-4 w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2" />
                 </svg>
-                カンバン
+                <span className="hidden sm:inline">カンバン</span>
               </span>
             </button>
             <button
               onClick={() => setViewMode("category")}
-              className={`px-4 py-2 ${
+              className={`min-h-[44px] px-3 py-2 text-sm ${
                 viewMode === "category"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:px-4`}
             >
-              <span className="flex items-center">
-                <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <span className="flex items-center justify-center">
+                <svg className="mr-1 h-4 w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                カテゴリ
+                <span className="hidden sm:inline">カテゴリ</span>
               </span>
             </button>
           </div>
           
           {/* アクションボタン */}
-          <button
-            onClick={() => {
-              setEditingTodo(null);
-              setInitialStatus(null);
-              setIsFormOpen(!isFormOpen);
-            }}
-            className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-          >
-            {isFormOpen ? "キャンセル" : "新規タスク"}
-          </button>
-          
-          <button
-            onClick={handleDeleteCompleted}
-            className="rounded-md border border-red-500 bg-gray-800 px-4 py-2 text-red-400 hover:bg-gray-700"
-          >
-            完了済みを削除
-          </button>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+            <button
+              onClick={() => {
+                setEditingTodo(null);
+                setInitialStatus(null);
+                setIsFormOpen(!isFormOpen);
+              }}
+              className="min-h-[44px] rounded-md bg-green-600 px-4 py-2 text-base text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:text-sm"
+            >
+              {isFormOpen ? "キャンセル" : "新規タスク"}
+            </button>
+            
+            <button
+              onClick={handleDeleteCompleted}
+              className="min-h-[44px] rounded-md border border-red-500 bg-gray-800 px-4 py-2 text-base text-red-400 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:text-sm"
+            >
+              完了済みを削除
+            </button>
+          </div>
         </div>
       </div>
 
       {/* タスク作成・編集フォーム */}
       {isFormOpen && (
-        <div className="mb-6 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-md">
-          <h2 className="mb-4 text-xl font-semibold text-white">
+        <div className="mb-4 rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-md sm:mb-6 sm:p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white sm:text-xl">
             {editingTodo ? "タスクを編集" : "新規タスク"}
             {initialStatus && !editingTodo && (
-              <span className="ml-2 text-sm text-gray-400">
+              <span className="ml-2 text-sm text-gray-400 block sm:inline">
                 ({initialStatus === "TODO" ? "未着手" : initialStatus === "IN_PROGRESS" ? "進行中" : "完了"}に追加)
               </span>
             )}
@@ -441,14 +444,14 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
 
       {/* ローディング表示 */}
       {isLoading && (
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-blue-500"></div>
+        <div className="flex justify-center py-12 sm:py-8">
+          <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-t-2 border-blue-500 sm:h-8 sm:w-8"></div>
         </div>
       )}
 
       {/* コンテンツ */}
       {!isLoading && (
-        <div className="mt-4">
+        <div className="mt-3 sm:mt-4">
           {viewMode === "list" && (
             <TodoList
               todos={todos}
@@ -464,6 +467,7 @@ export default function TodosPage({ initialTodos, userId }: TodosPageProps) {
               todos={todos}
               onToggleComplete={handleToggleComplete}
               onDelete={handleDelete}
+              onArchive={handleDelete} // 一時的にonDeleteを使用
               onEdit={handleEdit}
               onStatusChange={handleStatusChange}
               onAddTask={handleAddTaskWithStatus}

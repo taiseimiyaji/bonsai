@@ -5,6 +5,7 @@ import { DragDropContext, Droppable } from "@hello-pangea/dnd";
 import TodoItem from "./TodoItem";
 import { trpc } from "@/app/trpc-client";
 import { toast } from "react-hot-toast";
+import { useOptimisticTodos } from "../hooks/useOptimisticTodos";
 
 type TodoListProps = {
   todos: any[];
@@ -21,6 +22,9 @@ export default function TodoList({
   onEdit,
   onOrderChange,
 }: TodoListProps) {
+  // 楽観的更新フックを使用
+  const { optimisticUpdateOrder, optimisticToggleComplete, optimisticDelete } = useOptimisticTodos();
+  
   // トップレベルのタスクのみをフィルタリング
   const topLevelTodos = todos.filter((todo) => !todo.parentId);
 
@@ -36,14 +40,11 @@ export default function TodoList({
     // ドラッグしたタスクのID
     const taskId = draggableId;
     
-    // 新しい順序
-    const newOrder = destination.index;
+    // 新しい順序を計算（1024刻みで順序を設定）
+    const newOrder = destination.index * 1024;
     
-    // 親タスクIDの変更（今回はトップレベルのみの実装なので親は変更しない）
-    const newParentId = null;
-    
-    // 順序変更を親コンポーネントに通知
-    onOrderChange(taskId, newOrder, newParentId);
+    // 楽観的更新を使用して即座にUIを更新
+    optimisticUpdateOrder(taskId, newOrder);
   };
 
   return (
@@ -53,18 +54,20 @@ export default function TodoList({
           <div
             {...provided.droppableProps}
             ref={provided.innerRef}
-            className="space-y-2"
+            className="space-y-2 sm:space-y-3"
           >
             {topLevelTodos.length === 0 ? (
-              <p className="py-4 text-center text-gray-500">タスクがありません</p>
+              <div className="py-8 text-center">
+                <p className="text-base text-gray-400 sm:text-sm">タスクがありません</p>
+              </div>
             ) : (
               topLevelTodos.map((todo, index) => (
                 <TodoItem
                   key={todo.id}
                   todo={todo}
                   index={index}
-                  onToggleComplete={onToggleComplete}
-                  onDelete={onDelete}
+                  onToggleComplete={optimisticToggleComplete}
+                  onDelete={optimisticDelete}
                   onEdit={onEdit}
                 />
               ))

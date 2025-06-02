@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run type-check:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(rm:*)",
+      "Bash(npx prisma migrate dev:*)"
+    ],
+    "deny": []
+  }
+}

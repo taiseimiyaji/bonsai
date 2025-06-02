@@ -11,7 +11,6 @@ export default function TodosPageClient(props: {
 	userId: string;
 }) {
 	const [newTodo, setNewTodo] = useState("");
-	const [todos, setTodos] = useState(props.initialTodos);
 	const [editingTodo, setEditingTodo] = useState<any | null>(null);
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 	
@@ -19,7 +18,9 @@ export default function TodosPageClient(props: {
 	const utils = trpc.useContext();
 	const todosQuery = trpc.todo.getAll.useQuery(undefined, {
 		initialData: { todos: props.initialTodos },
-		enabled: false, // 初期データがあるので自動フェッチは無効化
+		// 楽観的更新を優先するため、自動refetchを制限
+		refetchOnWindowFocus: false,
+		refetchOnMount: false,
 	});
 	
 	const createMutation = trpc.todo.create.useMutation({
@@ -55,6 +56,16 @@ export default function TodosPageClient(props: {
 		}
 	});
 
+	const archiveMutation = trpc.todo.archive.useMutation({
+		onSuccess: () => {
+			utils.todo.getAll.invalidate();
+			toast.success("Todoをアーカイブしました");
+		},
+		onError: (error) => {
+			toast.error(`エラー: ${error.message}`);
+		}
+	});
+
 	const updateStatusMutation = trpc.todo.update.useMutation({
 		onMutate: async (newData) => {
 			await utils.todo.getAll.cancel();
@@ -69,14 +80,12 @@ export default function TodosPageClient(props: {
 					} : todo
 				);
 				utils.todo.getAll.setData(undefined, { todos: updatedTodos });
-				setTodos(updatedTodos);
 			}
 			return { previousTodos };
 		},
 		onError: (err, newData, context) => {
 			if (context?.previousTodos) {
 				utils.todo.getAll.setData(undefined, context.previousTodos);
-				setTodos(context.previousTodos.todos);
 			}
 			toast.error(`ステータス更新エラー: ${err.message}`);
 		},
@@ -94,8 +103,7 @@ export default function TodosPageClient(props: {
 				const updatedTodos = previousTodos.todos.map(todo => 
 					todo.id === newData.taskId ? { ...todo, order: newData.newOrder } : todo
 				);
-				utils.todo.getAll.setData(undefined, { todos: updatedTodos });
-				setTodos(updatedTodos); 
+				utils.todo.getAll.setData(undefined, { todos: updatedTodos }); 
 			}
 
 			return { previousTodos };
@@ -103,7 +111,6 @@ export default function TodosPageClient(props: {
 		onError: (err, newData, context) => {
 			if (context?.previousTodos) {
 				utils.todo.getAll.setData(undefined, context.previousTodos);
-				setTodos(context.previousTodos.todos);
 			}
 			toast.error(`エラー: ${err.message}`);
 		},
@@ -133,6 +140,12 @@ export default function TodosPageClient(props: {
 				onSuccess: refreshTodos
 			});
 		}
+	};
+
+	const handleArchive = async (id: string) => {
+		archiveMutation.mutate({ id }, {
+			onSuccess: refreshTodos
+		});
 	};
 
 	const handleStatusChange = async (
@@ -203,39 +216,39 @@ export default function TodosPageClient(props: {
 	const refreshTodos = async () => {
 		const result = await utils.todo.getAll.fetch();
 		if (result.todos) {
-			setTodos(result.todos);
 		}
 	};
 
 	return (
-		<div className="container mx-auto p-4 max-w-6xl">
-			<h1 className="text-3xl font-bold mb-6 text-white">タスク管理</h1>
-			
-			{/* シンプルなTODO追加フォーム */}
-			<form onSubmit={handleCreate} className="mb-6 bg-gray-800 p-4 rounded-lg shadow-md">
-				<div className="flex items-center">
-					<input
-						type="text"
-						name="title"
-						value={newTodo}
-						onChange={(e) => setNewTodo(e.target.value)}
-						placeholder="新しいタスクを追加"
-						className="flex-grow p-2 bg-gray-700 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-					/>
-					<button
-						className="ml-3 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-						type="submit"
-						disabled={createMutation.isLoading}
-					>
-						{createMutation.isLoading ? "追加中..." : "追加"}
-					</button>
+		<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+			<div className="container mx-auto p-6 max-w-7xl">
+				<div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
+					<h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">タスク管理</h1>
+					
+					{/* モダンなTODO追加フォーム */}
+					<form onSubmit={handleCreate} className="flex gap-3">
+						<input
+							type="text"
+							name="title"
+							value={newTodo}
+							onChange={(e) => setNewTodo(e.target.value)}
+							placeholder="新しいタスクを追加..."
+							className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						/>
+						<button
+							className="px-6 py-3 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+							type="submit"
+							disabled={createMutation.isLoading}
+						>
+							{createMutation.isLoading ? "追加中..." : "追加"}
+						</button>
+					</form>
 				</div>
-			</form>
 			
 			{/* カンバンボード表示 */}
 			<div className="mt-8">
 				<TodoKanban
-					todos={todos}
+					todos={todosQuery.data?.todos || []}
 					onToggleComplete={(id, completed) => {
 						updateMutation.mutate({
 							id,
@@ -243,6 +256,7 @@ export default function TodosPageClient(props: {
 						});
 					}}
 					onDelete={handleDelete}
+				onArchive={handleArchive}
 					onEdit={handleEdit}
 					onStatusChange={handleStatusChange}
 					onAddTask={handleAddTask}
@@ -252,7 +266,7 @@ export default function TodosPageClient(props: {
 
 			{isEditModalOpen && editingTodo && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-					<div className="w-full max-w-md rounded-lg bg-gray-800 p-6">
+					<div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6">
 						<TodoForm
 							initialData={editingTodo}
 							onSubmit={handleUpdate}
@@ -265,5 +279,6 @@ export default function TodosPageClient(props: {
 				</div>
 			)}
 		</div>
+	</div>
 	);
 }

@@ -1,5 +1,5 @@
 // app/lib/trpc.ts
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { ZodError } from 'zod';
 import { auth } from "@/auth";
 
@@ -35,7 +35,10 @@ export const mergeRouters = t.mergeRouters;
 
 const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
     if (!ctx.session || !ctx.session.user) {
-        throw new Error('UNAUTHORIZED');
+        throw new TRPCError({
+            code: 'UNAUTHORIZED',
+            message: 'ログインが必要です',
+        });
     }
     return next({
         ctx: {

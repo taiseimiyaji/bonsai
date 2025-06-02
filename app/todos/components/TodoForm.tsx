@@ -85,9 +85,9 @@ export default function TodoForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
       <div>
-        <label htmlFor="title" className="block font-medium text-gray-200">
+        <label htmlFor="title" className="block text-base font-medium text-gray-200 sm:text-sm">
           タイトル <span className="text-red-400">*</span>
         </label>
         <input
@@ -95,29 +95,29 @@ export default function TodoForm({
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
           placeholder="タスクのタイトル"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="description" className="block font-medium text-gray-200">
+        <label htmlFor="description" className="block text-base font-medium text-gray-200 sm:text-sm">
           説明
         </label>
         <textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-2 block w-full min-h-[88px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
           placeholder="タスクの詳細説明"
           rows={3}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="dueDate" className="block font-medium text-gray-200">
+          <label htmlFor="dueDate" className="block text-base font-medium text-gray-200 sm:text-sm">
             期限日
           </label>
           <DatePicker
@@ -126,21 +126,21 @@ export default function TodoForm({
             onChange={(date) => setDueDate(date)}
             locale="ja"
             dateFormat="yyyy/MM/dd"
-            className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
             placeholderText="期限日を選択"
             isClearable
           />
         </div>
 
         <div>
-          <label htmlFor="priority" className="block font-medium text-gray-200">
+          <label htmlFor="priority" className="block text-base font-medium text-gray-200 sm:text-sm">
             優先度
           </label>
           <select
             id="priority"
             value={priority}
             onChange={(e) => setPriority(e.target.value as TodoPriority)}
-            className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
           >
             <option value="HIGH">高</option>
             <option value="MEDIUM">中</option>
@@ -149,16 +149,16 @@ export default function TodoForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="status" className="block font-medium text-gray-200">
+          <label htmlFor="status" className="block text-base font-medium text-gray-200 sm:text-sm">
             ステータス
           </label>
           <select
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value as TodoStatus)}
-            className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
           >
             <option value="TODO">未着手</option>
             <option value="IN_PROGRESS">進行中</option>
@@ -167,14 +167,14 @@ export default function TodoForm({
         </div>
 
         <div>
-          <label htmlFor="category" className="block font-medium text-gray-200">
+          <label htmlFor="category" className="block text-base font-medium text-gray-200 sm:text-sm">
             カテゴリ
           </label>
           <select
             id="category"
             value={categoryId || ""}
             onChange={(e) => setCategoryId(e.target.value || null)}
-            className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
           >
             <option value="">カテゴリなし</option>
             {categories.map((category: any) => (
@@ -188,14 +188,14 @@ export default function TodoForm({
 
       {!isEditMode && !parentId && (
         <div>
-          <label htmlFor="parentTask" className="block font-medium text-gray-200">
+          <label htmlFor="parentTask" className="block text-base font-medium text-gray-200 sm:text-sm">
             親タスク（オプション）
           </label>
           <select
             id="parentTask"
             value={parentId || ""}
             onChange={(e) => onSubmit({ ...initialData, parentId: e.target.value || null })}
-            className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
           >
             <option value="">親タスクなし（最上位タスク）</option>
             {parentTasks
@@ -209,18 +209,18 @@ export default function TodoForm({
         </div>
       )}
 
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="flex flex-col space-y-3 pt-4 sm:flex-row sm:justify-end sm:space-x-3 sm:space-y-0">
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-md border border-gray-600 bg-gray-800 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-700"
+          className="min-h-[44px] w-full rounded-md border border-gray-600 bg-gray-800 px-4 py-3 text-base font-medium text-gray-200 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:w-auto sm:text-sm"
         >
           キャンセル
         </button>
         <button
           type="submit"
           disabled={isLoading}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="min-h-[44px] w-full rounded-md bg-blue-600 px-4 py-3 text-base font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:w-auto sm:text-sm"
         >
           {isLoading ? "保存中..." : isEditMode ? "更新" : "作成"}
         </button>

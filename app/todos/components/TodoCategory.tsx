@@ -94,7 +94,7 @@ export default function TodoCategory() {
       return;
     }
     
-    if (editingCategory) {
+    if (editingCategory && editingCategory.id) {
       // 更新
       updateMutation.mutate({
         id: editingCategory.id,
@@ -113,25 +113,25 @@ export default function TodoCategory() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">カテゴリ管理</h2>
+    <div className="space-y-4 p-3 sm:space-y-6 sm:p-0">
+      <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <h2 className="text-lg font-semibold text-white sm:text-xl">カテゴリ管理</h2>
         <button
           onClick={() => {
             resetForm();
             setIsFormOpen(!isFormOpen);
           }}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="min-h-[44px] w-full rounded-md bg-blue-600 px-4 py-3 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:w-auto sm:text-sm"
         >
           {isFormOpen ? "キャンセル" : "カテゴリを追加"}
         </button>
       </div>
 
       {isFormOpen && (
-        <form onSubmit={handleSubmit} className="rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-md">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="rounded-lg border border-gray-700 bg-gray-800 p-4 shadow-md sm:p-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label htmlFor="name" className="block font-medium text-gray-200">
+              <label htmlFor="name" className="block text-base font-medium text-gray-200 sm:text-sm">
                 カテゴリ名 <span className="text-red-400">*</span>
               </label>
               <input
@@ -139,29 +139,29 @@ export default function TodoCategory() {
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="mt-1 block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-2 block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:mt-1 sm:px-2 sm:py-2 sm:text-sm"
                 placeholder="カテゴリ名を入力"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="color" className="block font-medium text-gray-200">
+              <label htmlFor="color" className="block text-base font-medium text-gray-200 sm:text-sm">
                 カラー
               </label>
-              <div className="mt-1 flex items-center space-x-2">
+              <div className="mt-2 flex flex-col space-y-3 sm:mt-1 sm:flex-row sm:items-center sm:space-x-2 sm:space-y-0">
                 <input
                   type="color"
                   id="color"
                   value={formData.color}
                   onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="h-10 w-10 rounded-md border border-gray-600 bg-transparent"
+                  className="h-12 w-full rounded-md border border-gray-600 bg-transparent sm:h-10 sm:w-10"
                 />
                 <input
                   type="text"
                   value={formData.color}
                   onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  className="block w-full rounded-md border border-gray-600 bg-gray-700 p-2 text-white shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="block w-full min-h-[44px] rounded-md border border-gray-600 bg-gray-700 px-3 py-3 text-base text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:px-2 sm:py-2 sm:text-sm"
                   placeholder="#RRGGBB"
                 />
               </div>
@@ -171,7 +171,7 @@ export default function TodoCategory() {
               <button
                 type="submit"
                 disabled={createMutation.isLoading || updateMutation.isLoading}
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="min-h-[44px] w-full rounded-md bg-blue-600 px-4 py-3 text-base font-medium text-white hover:bg-blue-700 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:w-auto sm:text-sm"
               >
                 {createMutation.isLoading || updateMutation.isLoading
                   ? "保存中..."
@@ -184,34 +184,34 @@ export default function TodoCategory() {
         </form>
       )}
 
-      <div className="mt-6">
-        <h3 className="mb-3 text-lg font-medium text-white">カテゴリ一覧</h3>
+      <div className="mt-4 sm:mt-6">
+        <h3 className="mb-3 text-base font-medium text-white sm:text-lg">カテゴリ一覧</h3>
         {categories.length === 0 ? (
-          <p className="text-gray-400">カテゴリがありません</p>
+          <p className="text-center text-base text-gray-400 py-8 sm:text-left sm:text-sm sm:py-4">カテゴリがありません</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3 sm:space-y-2">
             {categories.map((category: any) => (
               <div
                 key={category.id}
-                className="flex items-center justify-between rounded-md border border-gray-700 bg-gray-800 p-3 shadow-sm"
+                className="flex flex-col space-y-3 rounded-md border border-gray-700 bg-gray-800 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:space-y-0 sm:p-3"
               >
                 <div className="flex items-center space-x-3">
                   <div
-                    className="h-6 w-6 rounded-full"
+                    className="h-8 w-8 rounded-full sm:h-6 sm:w-6"
                     style={{ backgroundColor: category.color }}
                   ></div>
-                  <span className="text-white">{category.name}</span>
+                  <span className="text-base text-white sm:text-sm">{category.name}</span>
                 </div>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleEdit(category)}
-                    className="rounded-md bg-blue-900/50 px-3 py-1 text-sm text-blue-300 hover:bg-blue-800"
+                    className="min-h-[44px] flex-1 rounded-md bg-blue-900/50 px-4 py-3 text-base text-blue-300 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:min-h-0 sm:flex-none sm:px-3 sm:py-1 sm:text-sm"
                   >
                     編集
                   </button>
                   <button
                     onClick={() => handleDelete(category.id)}
-                    className="rounded-md bg-red-900/50 px-3 py-1 text-sm text-red-300 hover:bg-red-800"
+                    className="min-h-[44px] flex-1 rounded-md bg-red-900/50 px-4 py-3 text-base text-red-300 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900 sm:min-h-0 sm:flex-none sm:px-3 sm:py-1 sm:text-sm"
                   >
                     削除
                   </button>

@@ -1,10 +1,12 @@
 import GoogleProvider from "next-auth/providers/google";
+import type { NextAuthConfig } from "next-auth";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
+import type { Account, Profile } from "next-auth";
+import { prisma } from "@/prisma/prisma";
 
-import type { NextAuthOptions } from "next-auth";
-import {prisma} from "@/prisma/prisma";
-
-// App Router環境で使用するための関数として定義
-export const getNextAuthOptions = (): NextAuthOptions => ({
+// NextAuth.js v5用の設定
+export const nextAuthConfig: NextAuthConfig = {
 	debug: true,
 	session: { strategy: "jwt" },
 	providers: [
@@ -18,7 +20,15 @@ export const getNextAuthOptions = (): NextAuthOptions => ({
 		signIn: '/auth/signin',
 	},
 	callbacks: {
-		jwt: async ({ token, user, account, profile }) => {
+		jwt: async ({ 
+			token, 
+			user, 
+			account 
+		}: { 
+			token: JWT; 
+			user?: User; 
+			account?: Account | null; 
+		}) => {
 			if (user) {
 				token.userId = user.id;
 				token.role = (user as any).role;
@@ -28,8 +38,8 @@ export const getNextAuthOptions = (): NextAuthOptions => ({
 			}
 			return token;
 		},
-		session: ({ session, token }) => {
-			const result = {
+		session: ({ session, token }: { session: Session; token: JWT }) => {
+			return {
 				...session,
 				userId: token.userId,
 				user: {
@@ -38,9 +48,15 @@ export const getNextAuthOptions = (): NextAuthOptions => ({
 					role: token.role,
 				},
 			};
-			return result;
 		},
-		signIn: async ({ user, account, profile }) => {
+		signIn: async ({ 
+			user, 
+			account 
+		}: { 
+			user: User; 
+			account: Account | null; 
+			profile?: Profile; 
+		}) => {
 			try {
 				if (account?.provider === "google") {
 					const googleId = account.providerAccountId;
@@ -86,7 +102,8 @@ export const getNextAuthOptions = (): NextAuthOptions => ({
 			}
 		},
 	},
-});
+};
 
-// 後方互換性のために残しておく
-export const nextAuthOptions = getNextAuthOptions();
+// 後方互換性のためのエクスポート
+export const getNextAuthOptions = () => nextAuthConfig;
+export const nextAuthOptions = nextAuthConfig;

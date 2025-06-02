@@ -5,8 +5,8 @@ import {auth} from "@/auth";
 import {redirect} from "next/navigation";
 import { ScrapWithTimeAgo } from '@/app/types/ScrapWithTimeAgo';
 
-export default async function ScrapBookPage({params}: { params: { bookId: string } }) {
-    const bookId = params.bookId;
+export default async function ScrapBookPage({params}: { params: Promise<{ bookId: string }> }) {
+    const { bookId } = await params;
 
     const scrapBook = await trpcCaller(async (caller) => {
         return caller.scrapBook.getScrapBookById({ id: bookId });

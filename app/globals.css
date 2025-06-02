@@ -25,3 +25,49 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* DatePicker ダークモード対応 */
+.react-datepicker {
+  @apply !bg-gray-800 !border-gray-700;
+}
+
+.react-datepicker__header {
+  @apply !bg-gray-700 !border-gray-600;
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name {
+  @apply !text-gray-200;
+}
+
+.react-datepicker__day:hover {
+  @apply !bg-gray-600;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  @apply !bg-blue-600 !text-white;
+}
+
+.react-datepicker__day--keyboard-selected {
+  @apply !bg-blue-700;
+}
+
+.react-datepicker__day--disabled {
+  @apply !text-gray-500;
+}
+
+.react-datepicker__triangle {
+  @apply !border-b-gray-700;
+}
+
+.react-datepicker__navigation-icon::before {
+  @apply !border-gray-400;
+}
+
+.react-datepicker__navigation:hover *::before {
+  @apply !border-gray-200;
+}
