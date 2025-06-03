@@ -1,28 +1,47 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/app/trpc-client";
 import { toast } from "react-hot-toast";
 import { TodoStatus } from "@prisma/client";
 import TodoKanban from "./components/TodoKanban";
 import TodoForm from "./components/TodoForm";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export default function TodosPageClient(props: {
 	initialTodos: any;
 	userId: string;
 }) {
+	// ============ 全てのHooksを最初に定義 ============
 	const [newTodo, setNewTodo] = useState("");
 	const [editingTodo, setEditingTodo] = useState<any | null>(null);
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+	const router = useRouter();
+	const { status } = useSession();
 	
-	// tRPCのクエリとミューテーションを設定
-	const utils = trpc.useContext();
+	// tRPC関連のHooks
+	const utils = trpc.useUtils();
 	const todosQuery = trpc.todo.getAll.useQuery(undefined, {
-		initialData: { todos: props.initialTodos },
-		// 楽観的更新を優先するため、自動refetchを制限
+		...(props.initialTodos.length > 0 && { initialData: { todos: props.initialTodos } }),
+		enabled: status === "authenticated",
 		refetchOnWindowFocus: false,
-		refetchOnMount: false,
+		refetchOnMount: true,
+		retry: (failureCount, error) => {
+			if (error.data?.code === 'UNAUTHORIZED') {
+				console.error('認証エラー:', error);
+				router.push("/auth/signin");
+				return false;
+			}
+			return failureCount < 3;
+		},
+		onError: (error) => {
+			console.error('TODOクエリエラー:', error);
+			if (error.data?.code === 'UNAUTHORIZED') {
+				router.push("/auth/signin");
+			}
+		},
 	});
-	
+
 	const createMutation = trpc.todo.create.useMutation({
 		onSuccess: () => {
 			setNewTodo("");
@@ -30,6 +49,10 @@ export default function TodosPageClient(props: {
 			toast.success("Todoが追加されました");
 		},
 		onError: (error) => {
+			if (error.data?.code === 'UNAUTHORIZED') {
+				router.push("/auth/signin");
+				return;
+			}
 			toast.error(`エラー: ${error.message}`);
 		}
 	});
@@ -42,6 +65,10 @@ export default function TodosPageClient(props: {
 			toast.success("タスクが更新されました");
 		},
 		onError: (error) => {
+			if (error.data?.code === 'UNAUTHORIZED') {
+				router.push("/auth/signin");
+				return;
+			}
 			toast.error(`エラー: ${error.message}`);
 		}
 	});
@@ -52,6 +79,10 @@ export default function TodosPageClient(props: {
 			toast.success("Todoが削除されました");
 		},
 		onError: (error) => {
+			if (error.data?.code === 'UNAUTHORIZED') {
+				router.push("/auth/signin");
+				return;
+			}
 			toast.error(`エラー: ${error.message}`);
 		}
 	});
@@ -62,63 +93,62 @@ export default function TodosPageClient(props: {
 			toast.success("Todoをアーカイブしました");
 		},
 		onError: (error) => {
+			if (error.data?.code === 'UNAUTHORIZED') {
+				router.push("/auth/signin");
+				return;
+			}
 			toast.error(`エラー: ${error.message}`);
 		}
 	});
 
 	const updateStatusMutation = trpc.todo.update.useMutation({
-		onMutate: async (newData) => {
-			await utils.todo.getAll.cancel();
-			const previousTodos = utils.todo.getAll.getData();
-
-			if (previousTodos) {
-				const updatedTodos = previousTodos.todos.map(todo =>
-					todo.id === newData.id ? { 
-						...todo, 
-						status: newData.data.status as TodoStatus,
-						order: newData.data.order !== undefined ? newData.data.order : todo.order
-					} : todo
-				);
-				utils.todo.getAll.setData(undefined, { todos: updatedTodos });
-			}
-			return { previousTodos };
-		},
-		onError: (err, newData, context) => {
-			if (context?.previousTodos) {
-				utils.todo.getAll.setData(undefined, context.previousTodos);
-			}
-			toast.error(`ステータス更新エラー: ${err.message}`);
-		},
 		onSuccess: () => {
 			utils.todo.getAll.invalidate();
+		},
+		onError: (error) => {
+			if (error.data?.code === 'UNAUTHORIZED') {
+				router.push("/auth/signin");
+				return;
+			}
+			toast.error(`ステータス更新エラー: ${error.message}`);
 		}
 	});
 
 	const updateOrderMutation = trpc.todo.updateOrder.useMutation({
-		onMutate: async (newData) => {
-			await utils.todo.getAll.cancel();
-			const previousTodos = utils.todo.getAll.getData();
-
-			if (previousTodos) {
-				const updatedTodos = previousTodos.todos.map(todo => 
-					todo.id === newData.taskId ? { ...todo, order: newData.newOrder } : todo
-				);
-				utils.todo.getAll.setData(undefined, { todos: updatedTodos }); 
-			}
-
-			return { previousTodos };
-		},
-		onError: (err, newData, context) => {
-			if (context?.previousTodos) {
-				utils.todo.getAll.setData(undefined, context.previousTodos);
-			}
-			toast.error(`エラー: ${err.message}`);
-		},
-		onSettled: () => {
+		onSuccess: () => {
 			utils.todo.getAll.invalidate();
+		},
+		onError: (error) => {
+			if (error.data?.code === 'UNAUTHORIZED') {
+				router.push("/auth/signin");
+				return;
+			}
+			toast.error(`エラー: ${error.message}`);
 		}
 	});
 
+	// useEffect
+	useEffect(() => {
+		if (status === "unauthenticated") {
+			console.log('TODOクライアント - セッション未認証のためリダイレクト');
+			router.push("/auth/signin");
+		}
+	}, [status, router]);
+
+	// ============ 条件分岐による早期リターン ============
+	if (status === "loading") {
+		return (
+			<div className="min-h-screen bg-gray-900 flex items-center justify-center">
+				<div className="text-white">ロード中...</div>
+			</div>
+		);
+	}
+
+	if (status === "unauthenticated") {
+		return null;
+	}
+
+	// ============ イベントハンドラー ============
 	const handleCreate = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!newTodo.trim()) {
@@ -128,24 +158,17 @@ export default function TodosPageClient(props: {
 		
 		createMutation.mutate({
 			title: newTodo,
-			completed: false
-		}, {
-			onSuccess: refreshTodos
 		});
 	};
 
 	const handleDelete = async (id: string) => {
 		if (window.confirm("このタスクを削除してもよろしいですか？")) {
-			deleteMutation.mutate({ id }, {
-				onSuccess: refreshTodos
-			});
+			deleteMutation.mutate({ id });
 		}
 	};
 
 	const handleArchive = async (id: string) => {
-		archiveMutation.mutate({ id }, {
-			onSuccess: refreshTodos
-		});
+		archiveMutation.mutate({ id });
 	};
 
 	const handleStatusChange = async (
@@ -153,17 +176,16 @@ export default function TodosPageClient(props: {
 		newStatus: TodoStatus,
 		newOrder?: number
 	) => {
-		// データの準備
+		console.log('handleStatusChange called:', { taskId, newStatus, newOrder });
+		
 		const taskData: any = {
 			status: newStatus
 		};
 		
-		// 順序が指定されている場合は追加
 		if (newOrder !== undefined) {
 			taskData.order = newOrder;
 		}
 		
-		// ミューテーションを実行
 		updateStatusMutation.mutate({
 			id: taskId,
 			data: taskData
@@ -174,21 +196,16 @@ export default function TodosPageClient(props: {
 		updateOrderMutation.mutate({ taskId, newOrder });
 	};
 
-	// タスク編集ハンドラ
 	const handleEdit = (todo: any) => {
 		setEditingTodo(todo);
 		setIsEditModalOpen(true);
 	};
 
-	// タスク更新ハンドラ
 	const handleUpdate = (data: any) => {
 		if (editingTodo) {
-			// データの深いコピーを作成して変更
 			const updatedData = { ...data };
 			
-			// dueDateが存在する場合は適切なDate型に変換
 			if (updatedData.dueDate) {
-				// 既にDate型の場合はそのまま、そうでなければ変換
 				updatedData.dueDate = updatedData.dueDate instanceof Date 
 					? updatedData.dueDate 
 					: new Date(updatedData.dueDate);
@@ -196,36 +213,25 @@ export default function TodosPageClient(props: {
 			
 			updateMutation.mutate({
 				id: editingTodo.id,
-				data: {
-					...updatedData,
-					completed: editingTodo.completed
-				}
+				data: updatedData
 			});
 		}
 	};
 
-	// 新しいタスク追加ハンドラ（ステータス指定）
 	const handleAddTask = async (status: TodoStatus) => {
 		createMutation.mutate({
 			title: "新しいタスク",
 			status,
-			completed: false
 		});
 	};
 
-	const refreshTodos = async () => {
-		const result = await utils.todo.getAll.fetch();
-		if (result.todos) {
-		}
-	};
-
+	// ============ レンダリング ============
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
 			<div className="container mx-auto p-6 max-w-7xl">
 				<div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6">
 					<h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">タスク管理</h1>
 					
-					{/* モダンなTODO追加フォーム */}
 					<form onSubmit={handleCreate} className="flex gap-3">
 						<input
 							type="text"
@@ -245,40 +251,39 @@ export default function TodosPageClient(props: {
 					</form>
 				</div>
 			
-			{/* カンバンボード表示 */}
-			<div className="mt-8">
-				<TodoKanban
-					todos={todosQuery.data?.todos || []}
-					onToggleComplete={(id, completed) => {
-						updateMutation.mutate({
-							id,
-							data: { completed }
-						});
-					}}
-					onDelete={handleDelete}
-				onArchive={handleArchive}
-					onEdit={handleEdit}
-					onStatusChange={handleStatusChange}
-					onAddTask={handleAddTask}
-					onOrderChange={handleOrderChange}
-				/>
-			</div>
-
-			{isEditModalOpen && editingTodo && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-					<div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6">
-						<TodoForm
-							initialData={editingTodo}
-							onSubmit={handleUpdate}
-							onCancel={() => {
-								setIsEditModalOpen(false);
-								setEditingTodo(null);
-							}}
-						/>
-					</div>
+				<div className="mt-8">
+					<TodoKanban
+						todos={todosQuery.data?.todos || []}
+						onToggleComplete={(id, completed) => {
+							updateMutation.mutate({
+								id,
+								data: { completed }
+							});
+						}}
+						onDelete={handleDelete}
+						onArchive={handleArchive}
+						onEdit={handleEdit}
+						onStatusChange={handleStatusChange}
+						onAddTask={handleAddTask}
+						onOrderChange={handleOrderChange}
+					/>
 				</div>
-			)}
+
+				{isEditModalOpen && editingTodo && (
+					<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+						<div className="w-full max-w-md rounded-lg bg-white dark:bg-gray-800 p-6">
+							<TodoForm
+								initialData={editingTodo}
+								onSubmit={handleUpdate}
+								onCancel={() => {
+									setIsEditModalOpen(false);
+									setEditingTodo(null);
+								}}
+							/>
+						</div>
+					</div>
+				)}
+			</div>
 		</div>
-	</div>
 	);
 }
