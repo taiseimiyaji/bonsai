@@ -59,7 +59,7 @@ jobs:
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
             ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            npx prisma db execute --stdin < ./scripts/test-connection.sql
+            npx prisma db execute --url="${{ secrets.DATABASE_URL }}" --stdin < ./scripts/test-connection.sql
 
       - name: Cloud Runへのデプロイ
         run: |
