@@ -25,7 +25,9 @@ export default function TodosPageClient(props: {
 		...(props.initialTodos.length > 0 && { initialData: { todos: props.initialTodos } }),
 		enabled: status === "authenticated",
 		refetchOnWindowFocus: false,
-		refetchOnMount: true,
+		refetchOnMount: props.initialTodos.length === 0, // 初期データがない場合のみfetch
+		refetchOnReconnect: false,
+		staleTime: 10 * 60 * 1000, // 10分間はstaleにならない
 		retry: (failureCount, error) => {
 			if (error.data?.code === 'UNAUTHORIZED') {
 				console.error('認証エラー:', error);
@@ -102,28 +104,85 @@ export default function TodosPageClient(props: {
 	});
 
 	const updateStatusMutation = trpc.todo.update.useMutation({
-		onSuccess: () => {
-			utils.todo.getAll.invalidate();
+		onMutate: async (variables) => {
+			// クエリをキャンセルして楽観的更新が上書きされないようにする
+			await utils.todo.getAll.cancel();
+			
+			// 現在のデータのスナップショットを取得
+			const previousTodos = utils.todo.getAll.getData();
+			
+			// 楽観的更新を実行
+			utils.todo.getAll.setData(undefined, (old) => {
+				if (!old) return old;
+				return {
+					todos: old.todos.map((todo) => {
+						if (todo.id === variables.id) {
+							return { 
+								...todo, 
+								...variables.data,
+								// Date型の場合は文字列に変換
+								...(variables.data.dueDate instanceof Date && {
+									dueDate: variables.data.dueDate.toISOString()
+								})
+							} as typeof todo;
+						}
+						return todo;
+					}),
+				};
+			});
+			
+			return { previousTodos };
 		},
-		onError: (error) => {
+		onError: (error, variables, context) => {
+			// エラー時は元のデータに戻す
+			if (context?.previousTodos) {
+				utils.todo.getAll.setData(undefined, context.previousTodos);
+			}
 			if (error.data?.code === 'UNAUTHORIZED') {
 				router.push("/auth/signin");
 				return;
 			}
 			toast.error(`ステータス更新エラー: ${error.message}`);
+		},
+		onSettled: () => {
+			// 最終的にサーバーデータと同期（ただし、invalidateはしない）
+			// utils.todo.getAll.invalidate();
 		}
 	});
 
 	const updateOrderMutation = trpc.todo.updateOrder.useMutation({
-		onSuccess: () => {
-			utils.todo.getAll.invalidate();
+		onMutate: async (variables) => {
+			await utils.todo.getAll.cancel();
+			const previousTodos = utils.todo.getAll.getData();
+			
+			// 楽観的更新
+			utils.todo.getAll.setData(undefined, (old) => {
+				if (!old) return old;
+				return {
+					todos: old.todos.map((todo) => {
+						if (todo.id === variables.taskId) {
+							return { ...todo, order: variables.newOrder };
+						}
+						return todo;
+					}),
+				};
+			});
+			
+			return { previousTodos };
 		},
-		onError: (error) => {
+		onError: (error, variables, context) => {
+			if (context?.previousTodos) {
+				utils.todo.getAll.setData(undefined, context.previousTodos);
+			}
 			if (error.data?.code === 'UNAUTHORIZED') {
 				router.push("/auth/signin");
 				return;
 			}
 			toast.error(`エラー: ${error.message}`);
+		},
+		onSettled: () => {
+			// 最終的にサーバーデータと同期（ただし、invalidateはしない）
+			// utils.todo.getAll.invalidate();
 		}
 	});
 
