@@ -9,7 +9,10 @@
       "Bash(node:*)",
       "Bash(grep:*)",
       "Bash(rm:*)",
-      "Bash(npx prisma migrate dev:*)"
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx prisma generate:*)"
     ],
     "deny": []
   }

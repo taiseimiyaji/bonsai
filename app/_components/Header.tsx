@@ -79,7 +79,7 @@ const Header = ({ session }: { session: Session | null }) => {
 							<li>
 								<button
 									type={"button"}
-									onClick={() => signOut()}
+									onClick={() => signOut({ callbackUrl: '/' })}
 									className="rounded-lg bg-blue-500 px-3 py-2 text-white text-sm hover:bg-blue-600 transition-colors"
 								>
 									ログアウト
@@ -142,7 +142,7 @@ const Header = ({ session }: { session: Session | null }) => {
 								<li>
 									<button
 										type={"button"}
-										onClick={() => signOut()}
+										onClick={() => signOut({ callbackUrl: '/' })}
 										className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-800"
 									>
 										ログアウト

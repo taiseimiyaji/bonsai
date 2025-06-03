@@ -10,10 +10,12 @@ import type { Session, User, Account } from "next-auth";
 export const { handlers, auth, signIn } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
   session: { strategy: "jwt" },
+  // Auth.js v5 では secret は自動的に AUTH_SECRET から読み込まれる
+  trustHost: true,
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true, // 同じメールアドレスを持つアカウントの自動リンクを許可
     }),
   ] as Provider[],

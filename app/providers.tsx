@@ -17,6 +17,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				refetchOnReconnect: false,
 				// staleTimeを長めに設定（5分）
 				staleTime: 5 * 60 * 1000,
+				onError: (error: any) => {
+					// 認証エラーの場合はサインインページにリダイレクト
+					if (error?.data?.code === 'UNAUTHORIZED') {
+						window.location.href = '/auth/signin';
+					}
+				},
+			},
+			mutations: {
+				onError: (error: any) => {
+					// 認証エラーの場合はサインインページにリダイレクト
+					if (error?.data?.code === 'UNAUTHORIZED') {
+						window.location.href = '/auth/signin';
+					}
+				},
 			},
 		},
 	}));
@@ -39,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 	return (
 		<trpc.Provider client={trpcClient} queryClient={queryClient}>
-			<SessionProvider>
+			<SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={true}>
 				<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 			</SessionProvider>
 		</trpc.Provider>

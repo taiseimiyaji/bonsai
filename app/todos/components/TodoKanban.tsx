@@ -3,7 +3,7 @@
 import { useState, useCallback, memo, useMemo } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { TodoStatus } from "@prisma/client";
-import { useOptimisticTodos } from "../hooks/useOptimisticTodos";
+import { trpc } from "@/app/trpc-client";
 
 type TodoKanbanProps = {
   todos: any[];
@@ -342,8 +342,9 @@ export default function TodoKanban({
   onAddTask,
   onOrderChange, 
 }: TodoKanbanProps) {
-  // 楽観的更新フックを使用
-  const { optimisticUpdateOrder } = useOptimisticTodos();
+  // tRPC utilsを取得してローカル状態を即座に更新
+  const utils = trpc.useUtils();
+
   // ステータスごとのTodoをメモ化
   const todosByStatus = useMemo(() => {
     return todos.reduce((acc, todo) => {
@@ -406,8 +407,23 @@ export default function TodoKanban({
         newOrder = (beforeItem.order + afterItem.order) / 2;
       }
       
-      // 移動したアイテムのみ更新
-      optimisticUpdateOrder(movedItem.id, newOrder);
+      // 即座にローカル状態を更新（楽観的更新）
+      utils.todo.getAll.setData(undefined, (old) => {
+        if (!old) return old;
+        return {
+          todos: old.todos.map((todo) => {
+            if (todo.id === movedItem.id) {
+              return { ...todo, order: newOrder };
+            }
+            return todo;
+          }),
+        };
+      });
+
+      // 親コンポーネントに順序変更を通知
+      if (onOrderChange) {
+        onOrderChange(movedItem.id, newOrder);
+      }
     } else {
       // 異なるステータス間の移動
       const [movedItem] = sourceList.splice(source.index, 1);
@@ -422,10 +438,25 @@ export default function TodoKanban({
         afterItem?.order ?? null
       );
 
-      // 楽観的更新を使用してステータスと順序を即座に更新
-      optimisticUpdateOrder(movedItem.id, newOrder, destStatus);
+      // 即座にローカル状態を更新（楽観的更新）
+      utils.todo.getAll.setData(undefined, (old) => {
+        if (!old) return old;
+        return {
+          todos: old.todos.map((todo) => {
+            if (todo.id === movedItem.id) {
+              return { ...todo, status: destStatus, order: newOrder };
+            }
+            return todo;
+          }),
+        };
+      });
+
+      // 親コンポーネントにステータス変更を通知（順序も含む）
+      if (onStatusChange) {
+        onStatusChange(movedItem.id, destStatus, newOrder);
+      }
     }
-  }, [todosByStatus, reorder, calculateNewOrder, optimisticUpdateOrder]);
+  }, [todosByStatus, reorder, calculateNewOrder, onOrderChange, onStatusChange, utils]);
 
   const handleAddTask = useCallback((status: TodoStatus) => {
     if (onAddTask) {

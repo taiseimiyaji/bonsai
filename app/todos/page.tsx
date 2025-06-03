@@ -1,20 +1,26 @@
 import { auth } from "@/auth";
-import { trpcCaller } from "@/app/api/trpc/trpc-server";
+import { redirect } from "next/navigation";
 import TodosPageClient from "./TodosPage.client";
 
 export default async function TodosIndexPage() {
 	const session = await auth();
+	
+	console.log('TODO Page - Session check:', {
+		hasSession: !!session,
+		hasUser: !!session?.user,
+		userId: session?.user?.id,
+		userEmail: session?.user?.email,
+	});
+	
 	if (!session?.user?.id) {
-		throw new Error("Authentication required. Please log in.");
+		console.log('TODO Page - Redirecting to signin: No valid session');
+		redirect("/auth/signin");
 	}
 	const userId = session.user.id;
 	
-	// tRPCを使用してTodoリストを取得
-	const { todos } = await trpcCaller(caller => caller.todo.getAll());
-	
 	return (
 		<div className="min-h-screen bg-gray-900">
-			<TodosPageClient initialTodos={todos ?? []} userId={userId} />
+			<TodosPageClient initialTodos={[]} userId={userId} />
 		</div>
 	);
 }
