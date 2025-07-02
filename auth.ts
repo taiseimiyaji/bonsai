@@ -9,7 +9,11 @@ import type { Session, User, Account } from "next-auth";
 
 export const { handlers, auth, signIn } = NextAuth({
   adapter: PrismaAdapter(prisma) as Adapter,
-  session: { strategy: "jwt" },
+  session: { 
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30日間
+    updateAge: 24 * 60 * 60, // 24時間ごとに更新
+  },
   // Auth.js v5 では secret は自動的に AUTH_SECRET から読み込まれる
   trustHost: true,
   providers: [
@@ -107,4 +111,8 @@ export const { handlers, auth, signIn } = NextAuth({
   },
   // デバッグを有効にする (開発中のみ)
   debug: process.env.NODE_ENV === 'development',
+  // JWTの設定
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30日間
+  },
 });
