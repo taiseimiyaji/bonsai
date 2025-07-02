@@ -20,7 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				onError: (error: any) => {
 					// 認証エラーの場合はサインインページにリダイレクト
 					if (error?.data?.code === 'UNAUTHORIZED') {
-						window.location.href = '/auth/signin';
+						// 既にサインインページにいる場合はリダイレクトしない
+						if (!window.location.pathname.includes('/auth/signin')) {
+							window.location.href = '/auth/signin';
+						}
 					}
 				},
 			},
@@ -28,7 +31,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				onError: (error: any) => {
 					// 認証エラーの場合はサインインページにリダイレクト
 					if (error?.data?.code === 'UNAUTHORIZED') {
-						window.location.href = '/auth/signin';
+						// 既にサインインページにいる場合はリダイレクトしない
+						if (!window.location.pathname.includes('/auth/signin')) {
+							window.location.href = '/auth/signin';
+						}
 					}
 				},
 			},
@@ -53,7 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 	return (
 		<trpc.Provider client={trpcClient} queryClient={queryClient}>
-			<SessionProvider refetchInterval={5 * 60} refetchOnWindowFocus={true}>
+			<SessionProvider refetchInterval={30 * 60} refetchOnWindowFocus={false}>
 				<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 			</SessionProvider>
 		</trpc.Provider>
