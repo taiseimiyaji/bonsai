@@ -51,8 +51,17 @@ export const { handlers, auth, signIn } = NextAuth({
     },
     // セッションにJWTの情報を反映
     async session({ session, token }: { session: Session; token: JWT }) {
-      if (token.userId && session.user) {
-        session.user.id = token.userId as string; // ユーザーIDをセッションに追加
+      if (token.userId) {
+        // 既存のセッション情報にユーザーIDを統一的に付与
+        session.userId = token.userId as string;
+        if (session.user) {
+          session.user.id = token.userId as string;
+          (session.user as any).userId = token.userId as string;
+        } else {
+          session.user = { id: token.userId as string } as Session['user'];
+          (session.user as any).userId = token.userId as string;
+        }
+        // session.userId を参照しているコードが存在するため、保持しておく
       }
       if (token.role && session.user) {
         (session.user as any).role = token.role; // ロールをセッションに追加 (型の拡張が必要な場合)
