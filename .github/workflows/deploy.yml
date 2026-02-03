@@ -10,7 +10,6 @@ env:
   PROJECT_ID: bonsai-410001
   SERVICE_NAME: bonsai
   REGION: asia-northeast1
-  IMAGE_PATH: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}
 
 jobs:
   deploy:
@@ -43,21 +42,24 @@ jobs:
 
       - name: ビルドとプッシュ
         run: |
-          docker build -t ${{ env.IMAGE_PATH }}:${{ github.sha }} .
-          docker push ${{ env.IMAGE_PATH }}:${{ github.sha }}
+          IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
+          docker build -t "${IMAGE_PATH}:${{ github.sha }}" .
+          docker push "${IMAGE_PATH}:${{ github.sha }}"
 
       - name: マイグレーションの実行
         run: |
+          IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
           docker run --rm \
             -e DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             -e DIRECT_URL="${{ secrets.DIRECT_URL }}" \
-            ${{ env.IMAGE_PATH }}:${{ github.sha }} \
+            "${IMAGE_PATH}:${{ github.sha }}" \
             npx prisma migrate deploy
 
       - name: Cloud Runへのデプロイ
         run: |
+          IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image ${{ env.IMAGE_PATH }}:${{ github.sha }} \
+            --image "${IMAGE_PATH}:${{ github.sha }}" \
             --region ${{ env.REGION }} \
             --platform managed \
             --allow-unauthenticated \
@@ -81,7 +83,8 @@ jobs:
       - name: 古いコンテナイメージの削除（直近1個だけ保持）
         run: |
           set -euo pipefail
-          mapfile -t IMAGES < <(gcloud artifacts docker images list "${{ env.IMAGE_PATH }}" \
+          IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
+          mapfile -t IMAGES < <(gcloud artifacts docker images list "${IMAGE_PATH}" \
             --include-tags \
             --sort-by=~UPDATE_TIME \
             --format='get(NAME)')
