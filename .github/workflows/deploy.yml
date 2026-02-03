@@ -65,6 +65,16 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},\
               DIRECT_URL=${{ secrets.DIRECT_URL }},\
+              API_KEY=${{ secrets.API_KEY }},\
+              DISCORD_PUBLIC_KEY=${{ secrets.DISCORD_PUBLIC_KEY }},\
+              DISCORD_SHEET_ID=${{ secrets.DISCORD_SHEET_ID }},\
+              DISCORD_SHEET_NAME=${{ secrets.DISCORD_SHEET_NAME }},\
+              GOOGLE_CLIENT_EMAIL=${{ secrets.GOOGLE_CLIENT_EMAIL }},\
+              GOOGLE_PRIVATE_KEY=${{ secrets.GOOGLE_PRIVATE_KEY }},\
+              DISCORD_APPLICATION_ID=${{ secrets.DISCORD_APPLICATION_ID }},\
+              DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }},\
+              DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }},\
+              CRON_API_SECRET_KEY=${{ secrets.CRON_API_SECRET_KEY }},\
               AUTH_SECRET=${{ secrets.AUTH_SECRET || secrets.NEXTAUTH_SECRET }},\
               AUTH_URL=${{ secrets.AUTH_URL || secrets.NEXTAUTH_URL }},\
               AUTH_GOOGLE_ID=${{ secrets.AUTH_GOOGLE_ID || secrets.GOOGLE_CLIENT_ID }},\
@@ -99,5 +109,5 @@ jobs:
               continue
             fi
             echo "Deleting ${IMAGE_PATH}@${digest}"
-            gcloud artifacts docker images delete "${IMAGE_PATH}@${digest}" --quiet
+            gcloud artifacts docker images delete "${IMAGE_PATH}@${digest}" --delete-tags --quiet
           done
