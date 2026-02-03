@@ -84,17 +84,20 @@ jobs:
         run: |
           set -euo pipefail
           IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
-          mapfile -t IMAGES < <(gcloud artifacts docker images list "${IMAGE_PATH}" \
+          mapfile -t DIGESTS < <(gcloud artifacts docker images list "${IMAGE_PATH}" \
             --include-tags \
             --sort-by=~UPDATE_TIME \
-            --format='get(NAME)')
+            --format='value(DIGEST)')
 
-          if [ "${#IMAGES[@]}" -le 1 ]; then
-            echo "削除対象なし（イメージ数: ${#IMAGES[@]}）"
+          if [ "${#DIGESTS[@]}" -le 1 ]; then
+            echo "削除対象なし（イメージ数: ${#DIGESTS[@]}）"
             exit 0
           fi
 
-          for image in "${IMAGES[@]:1}"; do
-            echo "Deleting ${image}"
-            gcloud artifacts docker images delete "${image}" --quiet
+          for digest in "${DIGESTS[@]:1}"; do
+            if [ -z "${digest}" ]; then
+              continue
+            fi
+            echo "Deleting ${IMAGE_PATH}@${digest}"
+            gcloud artifacts docker images delete "${IMAGE_PATH}@${digest}" --quiet
           done
