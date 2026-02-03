@@ -109,5 +109,5 @@ jobs:
               continue
             fi
             echo "Deleting ${IMAGE_PATH}@${digest}"
-            gcloud artifacts docker images delete "${IMAGE_PATH}@${digest}" --quiet
+            gcloud artifacts docker images delete "${IMAGE_PATH}@${digest}" --delete-tags --quiet
           done
