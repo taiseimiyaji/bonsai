@@ -165,7 +165,7 @@ steps:
           --region "$$REGION" \
           --platform managed \
           --allow-unauthenticated \
-          --update-env-vars "NODE_ENV=production,CLOUD_TASKS_LOCATION=$$REGION,CLOUD_TASKS_QUEUE=$$QUEUE_NAME,DISCORD_WORKER_URL=$$WORKER_URL/tasks/discord-update" \
+          --update-env-vars "NODE_ENV=production,GOOGLE_CLOUD_PROJECT=bonsai-410001,CLOUD_TASKS_LOCATION=$$REGION,CLOUD_TASKS_QUEUE=$$QUEUE_NAME,DISCORD_WORKER_URL=$$WORKER_URL/tasks/discord-update" \
           --update-secrets "DISCORD_PUBLIC_KEY=DISCORD_PUBLIC_KEY:latest,WORKER_TASK_SHARED_SECRET=WORKER_TASK_SHARED_SECRET:latest"
 
 options:

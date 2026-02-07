@@ -148,6 +148,7 @@ jobs:
             --allow-unauthenticated \
             --set-env-vars="DISCORD_PUBLIC_KEY=${{ secrets.DISCORD_PUBLIC_KEY }},\
               WORKER_TASK_SHARED_SECRET=${{ secrets.WORKER_TASK_SHARED_SECRET }},\
+              GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }},\
               CLOUD_TASKS_LOCATION=${{ env.REGION }},\
               CLOUD_TASKS_QUEUE=${{ env.DISCORD_TASK_QUEUE }},\
               DISCORD_WORKER_URL=${WORKER_URL}/tasks/discord-update,\
