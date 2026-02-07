@@ -1,5 +1,7 @@
 steps:
-  # ビルドステップ
+  # =========================
+  # bonsai (既存アプリ) build/push
+  # =========================
   - name: 'gcr.io/cloud-builders/docker'
     env:
       - 'DOCKER_BUILDKIT=1'
@@ -9,13 +11,52 @@ steps:
       - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
       - '.'
 
-  # イメージをプッシュ
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
 
-  # マイグレーション用のステップを実行
+  # =========================
+  # discord-ingress build/push
+  # =========================
+  - name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
+    args:
+      - 'build'
+      - '-t'
+      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-ingress/discord-ingress:$SHORT_SHA'
+      - '-f'
+      - 'services/discord-ingress/Dockerfile'
+      - 'services/discord-ingress'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-ingress/discord-ingress:$SHORT_SHA'
+
+  # =========================
+  # discord-worker build/push
+  # =========================
+  - name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
+    args:
+      - 'build'
+      - '-t'
+      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-worker/discord-worker:$SHORT_SHA'
+      - '-f'
+      - 'services/discord-worker/Dockerfile'
+      - 'services/discord-worker'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-worker/discord-worker:$SHORT_SHA'
+
+  # =========================
+  # bonsai migration
+  # =========================
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args:
@@ -31,7 +72,9 @@ steps:
           asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA \
           npx prisma migrate deploy
 
-  # Cloud Runにデプロイ（マイグレーションなし）
+  # =========================
+  # bonsai deploy
+  # =========================
   - name: 'gcr.io/cloud-builders/gcloud'
     args:
       - 'run'
@@ -45,7 +88,7 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--update-env-vars'
-      - 'RUN_MIGRATIONS=false'
+      - 'RUN_MIGRATIONS=false,DISCORD_LEGACY_HANDLER_ENABLED=true'
       - '--update-secrets'
       - 'GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest,AUTH_URL=AUTH_URL:latest,AUTH_SECRET=AUTH_SECRET:latest'
       - '--update-secrets'
@@ -55,8 +98,80 @@ steps:
       - '--update-secrets'
       - 'DISCORD_APPLICATION_ID=DISCORD_APPLICATION_ID:latest,DISCORD_BOT_TOKEN=DISCORD_BOT_TOKEN:latest,DISCORD_GUILD_ID=DISCORD_GUILD_ID:latest,CRON_API_SECRET_KEY=CRON_API_SECRET_KEY:latest'
 
+  # =========================
+  # Cloud Tasks Queue ensure
+  # =========================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        REGION="asia-northeast1"
+        QUEUE_NAME="discord-update-queue"
+        if gcloud tasks queues describe "$$QUEUE_NAME" --location "$$REGION" >/dev/null 2>&1; then
+          echo "Queue exists: $$QUEUE_NAME"
+        else
+          gcloud tasks queues create "$$QUEUE_NAME" \
+            --location "$$REGION"
+        fi
+
+        gcloud tasks queues update "$$QUEUE_NAME" \
+          --location "$$REGION" \
+          --max-attempts=5 \
+          --max-retry-duration=300s \
+          --min-backoff=1s \
+          --max-backoff=30s
+
+  # =========================
+  # discord-worker deploy
+  # =========================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'discord-worker'
+      - '--image'
+      - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-worker/discord-worker:$SHORT_SHA'
+      - '--region'
+      - 'asia-northeast1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--update-env-vars'
+      - 'NODE_ENV=production,REQUIRE_CLOUD_TASKS_HEADERS=true'
+      - '--update-secrets'
+      - 'DISCORD_SHEET_ID=DISCORD_SHEET_ID:latest,DISCORD_SHEET_NAME=DISCORD_SHEET_NAME:latest,GOOGLE_CLIENT_EMAIL=GOOGLE_CLIENT_EMAIL:latest,GOOGLE_PRIVATE_KEY=GOOGLE_PRIVATE_KEY:latest,WORKER_TASK_SHARED_SECRET=WORKER_TASK_SHARED_SECRET:latest'
+
+  # =========================
+  # discord-ingress deploy
+  # =========================
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -euo pipefail
+        REGION="asia-northeast1"
+        QUEUE_NAME="discord-update-queue"
+        WORKER_URL="$$(gcloud run services describe discord-worker --region "$$REGION" --format='value(status.url)')"
+        if [ -z "$$WORKER_URL" ]; then
+          echo "discord-worker URLの取得に失敗しました"
+          exit 1
+        fi
+
+        gcloud run deploy discord-ingress \
+          --image "asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-ingress/discord-ingress:$SHORT_SHA" \
+          --region "$$REGION" \
+          --platform managed \
+          --allow-unauthenticated \
+          --update-env-vars "NODE_ENV=production,CLOUD_TASKS_LOCATION=$$REGION,CLOUD_TASKS_QUEUE=$$QUEUE_NAME,DISCORD_WORKER_URL=$$WORKER_URL/tasks/discord-update" \
+          --update-secrets "DISCORD_PUBLIC_KEY=DISCORD_PUBLIC_KEY:latest,WORKER_TASK_SHARED_SECRET=WORKER_TASK_SHARED_SECRET:latest"
+
 options:
   logging: CLOUD_LOGGING_ONLY
 
 images:
   - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/bonsai/bonsai:$SHORT_SHA'
+  - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-ingress/discord-ingress:$SHORT_SHA'
+  - 'asia-northeast1-docker.pkg.dev/bonsai-410001/cloud-run-source-deploy/discord-worker/discord-worker:$SHORT_SHA'
