@@ -48,6 +48,7 @@ const DISCORD_SHEET_ID = process.env.DISCORD_SHEET_ID;
 const DISCORD_SHEET_NAME = process.env.DISCORD_SHEET_NAME ?? 'メンバー管理';
 const GOOGLE_CLIENT_EMAIL = process.env.GOOGLE_CLIENT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
+const DISCORD_LEGACY_HANDLER_ENABLED = process.env.DISCORD_LEGACY_HANDLER_ENABLED !== 'false';
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
@@ -328,6 +329,13 @@ function verifyDiscordSignature(rawBody: Buffer, signature: string, timestamp: s
 }
 
 export async function POST(req: Request) {
+  if (!DISCORD_LEGACY_HANDLER_ENABLED) {
+    return new Response(
+      'Legacy Discord endpoint is disabled. Update Discord Interactions Endpoint to discord-ingress.',
+      { status: 410 },
+    );
+  }
+
   const signature = req.headers.get('x-signature-ed25519');
   const timestamp = req.headers.get('x-signature-timestamp');
   if (!signature || !timestamp) {

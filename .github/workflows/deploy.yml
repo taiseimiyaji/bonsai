@@ -9,6 +9,9 @@ on:
 env:
   PROJECT_ID: bonsai-410001
   SERVICE_NAME: bonsai
+  DISCORD_INGRESS_SERVICE_NAME: discord-ingress
+  DISCORD_WORKER_SERVICE_NAME: discord-worker
+  DISCORD_TASK_QUEUE: discord-update-queue
   REGION: asia-northeast1
 
 jobs:
@@ -40,11 +43,20 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      - name: ビルドとプッシュ
+      - name: ビルドとプッシュ（bonsai / discord-ingress / discord-worker）
         run: |
-          IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
-          docker build -t "${IMAGE_PATH}:${{ github.sha }}" .
-          docker push "${IMAGE_PATH}:${{ github.sha }}"
+          APP_IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
+          INGRESS_IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.DISCORD_INGRESS_SERVICE_NAME }}/${{ env.DISCORD_INGRESS_SERVICE_NAME }}"
+          WORKER_IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.DISCORD_WORKER_SERVICE_NAME }}/${{ env.DISCORD_WORKER_SERVICE_NAME }}"
+
+          docker build -t "${APP_IMAGE_PATH}:${{ github.sha }}" .
+          docker push "${APP_IMAGE_PATH}:${{ github.sha }}"
+
+          docker build -t "${INGRESS_IMAGE_PATH}:${{ github.sha }}" -f services/discord-ingress/Dockerfile services/discord-ingress
+          docker push "${INGRESS_IMAGE_PATH}:${{ github.sha }}"
+
+          docker build -t "${WORKER_IMAGE_PATH}:${{ github.sha }}" -f services/discord-worker/Dockerfile services/discord-worker
+          docker push "${WORKER_IMAGE_PATH}:${{ github.sha }}"
 
       - name: マイグレーションの実行
         run: |
@@ -81,6 +93,64 @@ jobs:
               AUTH_GOOGLE_SECRET=${{ secrets.AUTH_GOOGLE_SECRET || secrets.GOOGLE_CLIENT_SECRET }},\
               GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},\
               GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }},\
+              NODE_ENV=production,\
+              DISCORD_LEGACY_HANDLER_ENABLED=true"
+
+      - name: Cloud Tasks Queueの作成・確認
+        run: |
+          set -euo pipefail
+          if gcloud tasks queues describe "${{ env.DISCORD_TASK_QUEUE }}" --location "${{ env.REGION }}" >/dev/null 2>&1; then
+            echo "Queue exists: ${{ env.DISCORD_TASK_QUEUE }}"
+          else
+            gcloud tasks queues create "${{ env.DISCORD_TASK_QUEUE }}" \
+              --location "${{ env.REGION }}"
+          fi
+
+          gcloud tasks queues update "${{ env.DISCORD_TASK_QUEUE }}" \
+            --location "${{ env.REGION }}" \
+            --max-attempts=5 \
+            --max-retry-duration=300s \
+            --min-backoff=1s \
+            --max-backoff=30s
+
+      - name: discord-workerのデプロイ
+        run: |
+          WORKER_IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.DISCORD_WORKER_SERVICE_NAME }}/${{ env.DISCORD_WORKER_SERVICE_NAME }}"
+          gcloud run deploy ${{ env.DISCORD_WORKER_SERVICE_NAME }} \
+            --image "${WORKER_IMAGE_PATH}:${{ github.sha }}" \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars="DISCORD_SHEET_ID=${{ secrets.DISCORD_SHEET_ID }},\
+              DISCORD_SHEET_NAME=${{ secrets.DISCORD_SHEET_NAME }},\
+              GOOGLE_CLIENT_EMAIL=${{ secrets.GOOGLE_CLIENT_EMAIL }},\
+              GOOGLE_PRIVATE_KEY=${{ secrets.GOOGLE_PRIVATE_KEY }},\
+              WORKER_TASK_SHARED_SECRET=${{ secrets.WORKER_TASK_SHARED_SECRET }},\
+              REQUIRE_CLOUD_TASKS_HEADERS=true,\
+              NODE_ENV=production"
+
+      - name: discord-ingressのデプロイ
+        run: |
+          INGRESS_IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.DISCORD_INGRESS_SERVICE_NAME }}/${{ env.DISCORD_INGRESS_SERVICE_NAME }}"
+          WORKER_URL=$(gcloud run services describe ${{ env.DISCORD_WORKER_SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format='value(status.url)')
+
+          if [ -z "${WORKER_URL}" ]; then
+            echo "discord-worker URL の取得に失敗しました"
+            exit 1
+          fi
+
+          gcloud run deploy ${{ env.DISCORD_INGRESS_SERVICE_NAME }} \
+            --image "${INGRESS_IMAGE_PATH}:${{ github.sha }}" \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars="DISCORD_PUBLIC_KEY=${{ secrets.DISCORD_PUBLIC_KEY }},\
+              WORKER_TASK_SHARED_SECRET=${{ secrets.WORKER_TASK_SHARED_SECRET }},\
+              CLOUD_TASKS_LOCATION=${{ env.REGION }},\
+              CLOUD_TASKS_QUEUE=${{ env.DISCORD_TASK_QUEUE }},\
+              DISCORD_WORKER_URL=${WORKER_URL}/tasks/discord-update,\
               NODE_ENV=production"
 
       - name: デプロイ結果の確認
@@ -89,25 +159,37 @@ jobs:
           gcloud run services describe ${{ env.SERVICE_NAME }} \
             --region ${{ env.REGION }} \
             --format='get(status.url)'
+          gcloud run services describe ${{ env.DISCORD_WORKER_SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format='get(status.url)'
+          gcloud run services describe ${{ env.DISCORD_INGRESS_SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --format='get(status.url)'
 
-      - name: 古いコンテナイメージの削除（直近1個だけ保持）
+      - name: 古いコンテナイメージの削除（各サービスで直近1個だけ保持）
         run: |
           set -euo pipefail
-          IMAGE_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
-          mapfile -t DIGESTS < <(gcloud artifacts docker images list "${IMAGE_PATH}" \
-            --include-tags \
-            --sort-by=~UPDATE_TIME \
-            --format='value(DIGEST)')
+          cleanup_images () {
+            local image_path="$1"
+            mapfile -t digests < <(gcloud artifacts docker images list "${image_path}" \
+              --include-tags \
+              --sort-by=~UPDATE_TIME \
+              --format='value(DIGEST)')
 
-          if [ "${#DIGESTS[@]}" -le 1 ]; then
-            echo "削除対象なし（イメージ数: ${#DIGESTS[@]}）"
-            exit 0
-          fi
-
-          for digest in "${DIGESTS[@]:1}"; do
-            if [ -z "${digest}" ]; then
-              continue
+            if [ "${#digests[@]}" -le 1 ]; then
+              echo "削除対象なし: ${image_path}（イメージ数: ${#digests[@]}）"
+              return 0
             fi
-            echo "Deleting ${IMAGE_PATH}@${digest}"
-            gcloud artifacts docker images delete "${IMAGE_PATH}@${digest}" --delete-tags --quiet
-          done
+
+            for digest in "${digests[@]:1}"; do
+              if [ -z "${digest}" ]; then
+                continue
+              fi
+              echo "Deleting ${image_path}@${digest}"
+              gcloud artifacts docker images delete "${image_path}@${digest}" --delete-tags --quiet
+            done
+          }
+
+          cleanup_images "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}"
+          cleanup_images "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.DISCORD_INGRESS_SERVICE_NAME }}/${{ env.DISCORD_INGRESS_SERVICE_NAME }}"
+          cleanup_images "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.DISCORD_WORKER_SERVICE_NAME }}/${{ env.DISCORD_WORKER_SERVICE_NAME }}"
