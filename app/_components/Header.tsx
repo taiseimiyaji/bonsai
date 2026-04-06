@@ -15,6 +15,16 @@ const Header = ({ session }: { session: Session | null }) => {
 		setIsMenuOpen(!isMenuOpen);
 	};
 
+	const handleLogout = async () => {
+		try {
+			await fetch('/api/auth/logout', {
+				method: 'POST',
+			});
+		} finally {
+			await signOut({ callbackUrl: '/' });
+		}
+	};
+
 	if (!session) {
 		return (
 			<header className="shadow-md bg-white dark:bg-gray-900 relative z-10">
@@ -65,6 +75,11 @@ const Header = ({ session }: { session: Session | null }) => {
 								</Link>
 							</li>
 							<li>
+								<Link href="/settings" className="font-medium text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-300 px-3 py-2 rounded-md text-sm">
+									設定
+								</Link>
+							</li>
+							<li>
 								<Image
 									src={session.user?.image ?? "/user.svg"}
 									alt={session.user?.name ?? "ユーザー"}
@@ -79,7 +94,7 @@ const Header = ({ session }: { session: Session | null }) => {
 							<li>
 								<button
 									type={"button"}
-									onClick={() => signOut({ callbackUrl: '/' })}
+									onClick={handleLogout}
 									className="rounded-lg bg-blue-500 px-3 py-2 text-white text-sm hover:bg-blue-600 transition-colors"
 								>
 									ログアウト
@@ -134,6 +149,11 @@ const Header = ({ session }: { session: Session | null }) => {
 									</Link>
 								</li>
 								<li>
+									<Link href="/settings" className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+										設定
+									</Link>
+								</li>
+								<li>
 									<div className="flex items-center justify-between px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300">
 										<span>テーマ</span>
 										<ThemeToggle />
@@ -142,7 +162,7 @@ const Header = ({ session }: { session: Session | null }) => {
 								<li>
 									<button
 										type={"button"}
-										onClick={() => signOut({ callbackUrl: '/' })}
+										onClick={handleLogout}
 										className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-300 hover:bg-gray-100 dark:hover:bg-gray-800"
 									>
 										ログアウト

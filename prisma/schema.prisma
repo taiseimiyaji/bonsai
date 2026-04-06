@@ -17,7 +17,7 @@ generator client {
 
 model User {
   id            String          @id @default(uuid())
-  googleId      String          @unique
+  googleId      String?         @unique
   email         String          @unique
   name          String?
   image         String?
@@ -35,11 +35,28 @@ model User {
   // Auth.js用のリレーション
   accounts      Account[]
   sessions      Session[]
+  passkeys      Passkey[]
 }
 
 enum UserRole {
   USER
   ADMIN
+}
+
+model Passkey {
+  id                   String   @id @default(uuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialId         String   @unique
+  credentialPublicKey  Bytes
+  counter              BigInt   @default(0)
+  transports           String?
+  credentialDeviceType String
+  credentialBackedUp   Boolean  @default(false)
+  name                 String?
+  createdAt            DateTime @default(now())
+
+  @@index([userId])
 }
 
 // 優先度の列挙型
