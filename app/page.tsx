@@ -2,6 +2,7 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { performPasskeyAuthentication, isPasskeySupported } from "./lib/webauthn/passkey-client";
 import { TermsModal } from "./_components/TermsModal";
 import { InfoPageContent } from "./rss/info/_components/InfoPageContent";
 
@@ -20,12 +21,16 @@ export default function TopPage() {
 		}
 		// 利用規約とプライバシーポリシーの内容を取得
 		fetch('/term.md')
-			.then(res => res.text())
+			.then(res => res.clone().text())
 			.then(text => setTermsContent(text));
 		fetch('/privacy-policy.md')
-			.then(res => res.text())
+			.then(res => res.clone().text())
 			.then(text => setPrivacyContent(text));
 	}, [status, router]);
+
+	const [passkeyLoading, setPasskeyLoading] = useState(false);
+	const [passkeyError, setPasskeyError] = useState<string | null>(null);
+	const passkeySupported = typeof window !== 'undefined' && isPasskeySupported();
 
 	const handleLogin = async (event: React.MouseEvent) => {
 		event.preventDefault();
@@ -34,6 +39,24 @@ export default function TopPage() {
 			return;
 		}
 		const result = await signIn("google", { callbackUrl: "/rss/info" });
+	};
+
+	const handlePasskeyLogin = async (event: React.MouseEvent) => {
+		event.preventDefault();
+		if (!termsAgreed) {
+			alert('利用規約とプライバシーポリシーに同意してください。');
+			return;
+		}
+		setPasskeyError(null);
+		setPasskeyLoading(true);
+		try {
+			await performPasskeyAuthentication();
+			await signIn('passkey', { callbackUrl: '/rss/info' });
+		} catch (err) {
+			setPasskeyError(err instanceof Error ? err.message : '認証に失敗しました');
+		} finally {
+			setPasskeyLoading(false);
+		}
 	};
 
 	return (
@@ -83,6 +106,19 @@ export default function TopPage() {
 								</svg>
 								Googleでログイン
 							</button>
+							{passkeySupported && (
+								<button
+									onClick={handlePasskeyLogin}
+									disabled={passkeyLoading}
+									className="flex items-center bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+								>
+									<svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+									</svg>
+									{passkeyLoading ? '認証中...' : 'PassKeyでログイン'}
+								</button>
+							)}
+							{passkeyError && <p className="text-red-400 text-sm">{passkeyError}</p>}
 						</div>
 					)}
 				</div>
