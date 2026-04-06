@@ -7,13 +7,13 @@ import type {
   VerifyAuthenticationResponseOpts,
   AuthenticationResponseJSON,
 } from '@simplewebauthn/server';
-import { rpID, rpOrigin } from './config';
+import { getRpID, getRpOrigin } from './config';
 
 export async function createAuthenticationOptions(
   credentialIds: string[],
 ) {
   const opts: GenerateAuthenticationOptionsOpts = {
-    rpID,
+    rpID: getRpID(),
     allowCredentials: credentialIds.map((id) => ({
       id,
     })),
@@ -37,10 +37,11 @@ type VerifyAuthenticationParams = {
 export async function verifyAuthentication(
   params: VerifyAuthenticationParams,
 ) {
+  const rpID = getRpID();
   const opts: VerifyAuthenticationResponseOpts = {
     response: params.response,
     expectedChallenge: params.expectedChallenge,
-    expectedOrigin: rpOrigin,
+    expectedOrigin: getRpOrigin(),
     expectedRPID: rpID,
     credential: {
       id: params.passkey.credentialId,
