@@ -1,8 +1,23 @@
 export const rpName = 'bonsai';
 
-export const rpID = process.env.WEBAUTHN_RP_ID!;
+function getAuthUrl(): URL {
+  const authUrl = process.env.AUTH_URL;
+  if (!authUrl) {
+    throw new Error(
+      'AUTH_URL environment variable is required when WEBAUTHN_RP_ID / WEBAUTHN_ORIGIN are not set',
+    );
+  }
 
-export const rpOrigin = process.env.WEBAUTHN_ORIGIN!;
+  try {
+    return new URL(authUrl);
+  } catch {
+    throw new Error('AUTH_URL must be a valid absolute URL');
+  }
+}
+
+export const rpID = process.env.WEBAUTHN_RP_ID ?? getAuthUrl().hostname;
+
+export const rpOrigin = process.env.WEBAUTHN_ORIGIN ?? getAuthUrl().origin;
 
 export const CHALLENGE_COOKIE_NAME = '__webauthn_challenge';
 

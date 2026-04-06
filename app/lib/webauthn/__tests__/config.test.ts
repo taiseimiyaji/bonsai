@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 describe('WebAuthn Config', () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
+    vi.stubEnv('AUTH_URL', 'http://127.0.0.1:3000');
   });
 
   it('rpNameが定義されている', async () => {
@@ -15,12 +16,23 @@ describe('WebAuthn Config', () => {
   it('環境変数からRP設定を読み取れる', async () => {
     vi.stubEnv('WEBAUTHN_RP_ID', 'example.com');
     vi.stubEnv('WEBAUTHN_ORIGIN', 'https://example.com');
+    vi.stubEnv('AUTH_URL', 'https://fallback.example.com');
 
     vi.resetModules();
     const config = await import('../config');
 
     expect(config.rpID).toBe('example.com');
     expect(config.rpOrigin).toBe('https://example.com');
+  });
+
+  it('WEBAUTHN_* が未設定でも AUTH_URL からRP設定を導出できる', async () => {
+    vi.stubEnv('AUTH_URL', 'https://bonsai.example.com');
+
+    vi.resetModules();
+    const config = await import('../config');
+
+    expect(config.rpID).toBe('bonsai.example.com');
+    expect(config.rpOrigin).toBe('https://bonsai.example.com');
   });
 
   it('Cookie名定数がエクスポートされている', async () => {
