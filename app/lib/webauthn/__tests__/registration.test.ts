@@ -14,8 +14,8 @@ vi.mock('@simplewebauthn/server/helpers', () => ({
 
 vi.mock('../config', () => ({
   rpName: 'Test App',
-  rpID: 'localhost',
-  rpOrigin: 'http://localhost:3000',
+  getRpID: vi.fn(() => 'localhost'),
+  getRpOrigin: vi.fn(() => 'http://localhost:3000'),
 }));
 
 import {

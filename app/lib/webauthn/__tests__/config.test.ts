@@ -21,8 +21,8 @@ describe('WebAuthn Config', () => {
     vi.resetModules();
     const config = await import('../config');
 
-    expect(config.rpID).toBe('example.com');
-    expect(config.rpOrigin).toBe('https://example.com');
+    expect(config.getRpID()).toBe('example.com');
+    expect(config.getRpOrigin()).toBe('https://example.com');
   });
 
   it('WEBAUTHN_* が未設定でも AUTH_URL からRP設定を導出できる', async () => {
@@ -31,8 +31,17 @@ describe('WebAuthn Config', () => {
     vi.resetModules();
     const config = await import('../config');
 
-    expect(config.rpID).toBe('bonsai.example.com');
-    expect(config.rpOrigin).toBe('https://bonsai.example.com');
+    expect(config.getRpID()).toBe('bonsai.example.com');
+    expect(config.getRpOrigin()).toBe('https://bonsai.example.com');
+  });
+
+  it('RP設定を使わない import では AUTH_URL がなくても失敗しない', async () => {
+    vi.unstubAllEnvs();
+
+    vi.resetModules();
+    const config = await import('../config');
+
+    expect(config.AUTH_TOKEN_COOKIE_NAME).toBe('__passkey_auth_token');
   });
 
   it('Cookie名定数がエクスポートされている', async () => {
