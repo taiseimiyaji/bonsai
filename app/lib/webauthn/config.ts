@@ -15,9 +15,13 @@ function getAuthUrl(): URL {
   }
 }
 
-export const rpID = process.env.WEBAUTHN_RP_ID ?? getAuthUrl().hostname;
+export function getRpID(): string {
+  return process.env.WEBAUTHN_RP_ID ?? getAuthUrl().hostname;
+}
 
-export const rpOrigin = process.env.WEBAUTHN_ORIGIN ?? getAuthUrl().origin;
+export function getRpOrigin(): string {
+  return process.env.WEBAUTHN_ORIGIN ?? getAuthUrl().origin;
+}
 
 export const CHALLENGE_COOKIE_NAME = '__webauthn_challenge';
 

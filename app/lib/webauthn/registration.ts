@@ -8,7 +8,7 @@ import type {
   RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import { isoUint8Array } from '@simplewebauthn/server/helpers';
-import { rpName, rpID, rpOrigin } from './config';
+import { rpName, getRpID, getRpOrigin } from './config';
 
 type CreateRegistrationOptionsParams = {
   userId: string;
@@ -22,7 +22,7 @@ export async function createRegistrationOptions(
 ) {
   const opts: GenerateRegistrationOptionsOpts = {
     rpName,
-    rpID,
+    rpID: getRpID(),
     userID: isoUint8Array.fromUTF8String(params.userId),
     userName: params.email,
     userDisplayName: params.name,
@@ -44,10 +44,11 @@ type VerifyRegistrationParams = {
 };
 
 export async function verifyRegistration(params: VerifyRegistrationParams) {
+  const rpID = getRpID();
   const opts: VerifyRegistrationResponseOpts = {
     response: params.response,
     expectedChallenge: params.expectedChallenge,
-    expectedOrigin: rpOrigin,
+    expectedOrigin: getRpOrigin(),
     expectedRPID: rpID,
   };
 
